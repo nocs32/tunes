@@ -1,0 +1,5 @@
+packages:
+  - modules/*
+allowBuilds:
+  '@tailwindcss/oxide': true
+  esbuild: true

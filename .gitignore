@@ -1,0 +1,44 @@
+# Claude: shared rules/config are tracked, personal settings are not
+.claude/settings.local.json
+
+# Local notes
+.scratch/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output and caches
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.eslintcache
+
+# Local database
+data/
+
+# Environment files (keep the example)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test output
+playwright-report/
+test-results/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
