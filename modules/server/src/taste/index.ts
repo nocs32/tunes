@@ -4,7 +4,7 @@ import { cached } from '../cache/index.ts';
 import type { UserEnv } from '../context.ts';
 import type { Db } from '../db/index.ts';
 import type { Env } from '../env.ts';
-import { spotifyGetFor } from '../spotify/index.ts';
+import { spotifyFor } from '../spotify/index.ts';
 import { collectTaste, type RawTaste } from './collect.ts';
 import { buildProfile, type TasteProfile } from './profile.ts';
 
@@ -24,7 +24,7 @@ export const loadProfile = async (
     key: `taste:${userId}`,
     maxAgeMs: tasteMaxAgeMs,
     force,
-    load: () => collectTaste(spotifyGetFor(db, env, userId)),
+    load: () => collectTaste(spotifyFor(db, env, userId)),
   });
 
   return { profile: buildProfile(raw.value), fetchedAt: raw.fetchedAt };

@@ -1,6 +1,6 @@
 import type { Db } from '../db/index.ts';
 import type { Env } from '../env.ts';
-import { libraryContains, spotifyGetFor } from '../spotify/index.ts';
+import { libraryContains, spotifyFor } from '../spotify/index.ts';
 import { loadProfile, type Known, type TrackInfo } from '../taste/index.ts';
 import type { Suggestion, SuggestClient } from './claude.ts';
 import { type Discovery, system, userMessage } from './prompt.ts';
@@ -66,7 +66,7 @@ const markSaved = async (get: Parameters<typeof libraryContains>[0], tracks: Sel
 
 export const createRun = async ({ db, env, claude, userId }: RunDeps, input: RunInput): Promise<Run> => {
   const started = Date.now();
-  const get = spotifyGetFor(db, env, userId);
+  const get = spotifyFor(db, env, userId);
   const { profile } = await loadProfile(db, env, userId);
   const previous = input.refineOf?.tracks.map((item) => ({ artist: item.track.artists[0]?.name ?? '', title: item.track.name }));
   const refine = previous && input.note ? { previous, note: input.note } : undefined;

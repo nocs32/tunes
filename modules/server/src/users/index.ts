@@ -13,7 +13,13 @@ export type User = {
   tokenExpiresAt: number;
   authorizedAt: number;
   playlistId: string | null;
+  settings: UserSettings;
 };
+
+// Remembered between visits.
+export type UserSettings = { playlistMode: 'rolling' | 'new' };
+
+const defaultSettings: UserSettings = { playlistMode: 'rolling' };
 
 type UserRow = {
   id: string;
@@ -24,6 +30,7 @@ type UserRow = {
   token_expires_at: number;
   authorized_at: number;
   playlist_id: string | null;
+  settings: string;
 };
 
 const fromRow = (row: UserRow): User => ({
@@ -35,6 +42,7 @@ const fromRow = (row: UserRow): User => ({
   tokenExpiresAt: row.token_expires_at,
   authorizedAt: row.authorized_at,
   playlistId: row.playlist_id,
+  settings: { ...defaultSettings, ...(JSON.parse(row.settings) as Partial<UserSettings>) },
 });
 
 export const getUser = (db: Db, id: string): User | undefined => {
@@ -82,4 +90,13 @@ export const saveTokens = (db: Db, userId: string, tokens: Tokens, key: string):
     Date.now(),
     userId,
   );
+};
+
+// The rolling "Tunes" playlist (D7), once it exists.
+export const setPlaylistId = (db: Db, userId: string, playlistId: string): void => {
+  db.prepare('UPDATE users SET playlist_id = ?, updated_at = ? WHERE id = ?').run(playlistId, Date.now(), userId);
+};
+
+export const saveSettings = (db: Db, userId: string, settings: UserSettings): void => {
+  db.prepare('UPDATE users SET settings = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(settings), Date.now(), userId);
 };

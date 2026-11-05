@@ -10,6 +10,7 @@ export type Profile = Taste['profile'];
 export type Run = InferResponseType<typeof api.runs.$post, 200>;
 export type RunTrack = Run['tracks'][number];
 export type Discovery = Run['discovery'];
+export type PlaylistMode = Me['playlistMode'];
 
 // Every server error is `{ error, message }`; `code` says what kind (e.g. "relogin").
 export class ApiError extends Error {

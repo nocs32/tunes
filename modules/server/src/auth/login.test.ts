@@ -46,6 +46,7 @@ describe('login', () => {
       id: 'anna',
       displayName: 'Anna',
       imageUrl: null,
+      playlistMode: 'rolling',
     });
 
     await app.request('/api/auth/logout', { method: 'POST', headers: { Cookie: session } });

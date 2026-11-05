@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useState } from 'react';
+import type { PlaylistMode } from '@/api.ts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { RunForm } from './run-form.tsx';
@@ -40,15 +41,19 @@ function Failed({ error }: { error: RunError }): ReactElement {
   );
 }
 
-export function DiscoverPanel({ onLoggedOut }: { onLoggedOut: (message: string | null) => void }): ReactElement {
-  const { run, busy, error, start, refine, setRemoved } = useRuns(onLoggedOut);
+type DiscoverPanelProps = { playlistMode: PlaylistMode; onLoggedOut: (message: string | null) => void };
+
+export function DiscoverPanel({ playlistMode, onLoggedOut }: DiscoverPanelProps): ReactElement {
+  const { run, busy, error, start, refine, setRemoved, setSent } = useRuns(onLoggedOut);
 
   return (
     <div className="flex flex-col gap-10">
       <RunForm busy={busy !== null} initialDiscovery={run?.discovery ?? 'mixed'} onStart={start} />
       {busy && <Working refining={busy === 'refine'} />}
       {error && !busy && <Failed error={error} />}
-      {run && <RunResult run={run} busy={busy !== null} onRefine={refine} onRemove={setRemoved} />}
+      {run && (
+        <RunResult run={run} busy={busy !== null} playlistMode={playlistMode} onRefine={refine} onRemove={setRemoved} onSent={setSent} />
+      )}
     </div>
   );
 }
