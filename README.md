@@ -4,13 +4,24 @@ A personal music recommender on top of Spotify, for one person and up to four fr
 
 Log in with Spotify → Tunes reads your listening taste → Claude suggests music you don't know yet, optionally for a mood ("night drive", "focus, no vocals") → every suggestion is checked on Spotify, so nothing made up gets through → the list goes into a playlist in your Spotify account → thumbs up or down per track shapes the next run.
 
-**Status:** M4: thumbs up and down on every song, which Claude reads on later runs, and a list of earlier mixes. Next: putting it on the Pi.
+**Live at https://tunes.timnox.dev** on a Raspberry Pi (see [On the Pi](#on-the-pi-tables-host)). Only Spotify accounts added to the app's user list can log in.
+
+**What it does now:**
+- **Discover:** an optional mood ("night drive", "focus, no vocals") and a slider from close to adventurous. Claude suggests about 25 songs with a one-line reason each.
+- **Checked against Spotify:** every song is looked up before you see it, so nothing made up gets through. Songs you already know are marked, not hidden.
+- **Rework and trim:** "rework the list" with a note, and ✕ to leave songs out.
+- **Send to Spotify:** your rolling "Tunes" playlist (songs replaced each time), or a new playlist per mix.
+- **Thumbs up or down** on every song. Claude reads them on later runs, and a song you disliked never comes back.
+- **Your taste:** what Tunes knows about your listening, and the exact text Claude reads.
+- **Earlier mixes:** reopen any past mix.
+
+Not built yet: seed songs (pick songs you love as "more like these").
 
 ## Stack
 
 - `modules/server`: Node 24 + [Hono](https://hono.dev), SQLite through Node's built-in `node:sqlite`. Node runs the TypeScript directly, so there is no server build.
 - `modules/web`: Vite + React 19 + Tailwind 4 + [shadcn/ui](https://ui.shadcn.com). It calls the server through Hono's typed client.
-- Claude (Opus 5.5) through the Anthropic API, one call per run.
+- Claude (Opus 5.5) through the Anthropic API, one call per run (about $0.13–0.25 each).
 
 ## Run it locally
 
