@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createApp } from './app.ts';
 import { migrate, openDb } from './db/index.ts';
 import { migrations } from './db/migrations.ts';
+import { testApp } from './testing.ts';
 
 describe('database', () => {
   it('runs every migration on a new database', () => {
@@ -20,9 +20,16 @@ describe('database', () => {
 
 describe('api', () => {
   it('answers /api/health', async () => {
-    const response = await createApp(openDb(':memory:')).request('/api/health');
+    const response = await testApp().request('/api/health');
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, schema: migrations.length });
+  });
+
+  it('refuses the profile without a login', async () => {
+    const response = await testApp().request('/api/taste');
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: 'logged_out' });
   });
 });

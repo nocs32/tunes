@@ -8,7 +8,7 @@ import { readEnv } from './env.ts';
 
 const env = readEnv();
 const db = openDb(env.DATABASE_PATH);
-const app = createApp(db);
+const app = createApp(db, env);
 
 // In production this process also serves the built page; any unknown path gets index.html
 // so the page's own router can handle it. In dev, Vite serves the page and forwards /api here.
