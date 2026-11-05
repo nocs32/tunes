@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireUser } from '../auth/index.ts';
 import type { UserEnv } from '../context.ts';
 import { NotFound } from '../errors.ts';
+import { spotifyTrackId } from '../ids.ts';
 import { setVote } from '../feedback/index.ts';
 import { getJob, startJob } from '../jobs/index.ts';
 import { sendRun } from '../playlist/index.ts';
@@ -16,7 +17,7 @@ export type { Discovery } from './prompt.ts';
 export type { Run, RunTrack } from './store.ts';
 
 // /api/runs — suggestion runs.
-//   POST /                         { mood, discovery, seedTrackId? } → { jobId }: a new run, started in the background
+//   POST /                         { mood, discovery, seedTrackIds? } → { jobId }: a new run, started in the background
 //   POST /:id/refine               { note } → { jobId }: a new run that follows the note
 //   GET  /jobs/:jobId              → { status: running | done (with run) | failed (with error) }
 //   GET  /                         → { runs }: earlier runs, newest first
@@ -29,8 +30,8 @@ export type { Run, RunTrack } from './store.ts';
 const runBody = z.object({
   mood: z.string().trim().max(300).default(''),
   discovery: z.enum(discoveryLevels),
-  // "More like this": a Spotify track id (22 letters and digits).
-  seedTrackId: z.string().regex(/^[A-Za-z0-9]{22}$/).optional(),
+  // "More like this" (one song) or "Find more like these" (the crate's songs).
+  seedTrackIds: z.array(spotifyTrackId).max(10).optional(),
 });
 
 const refineBody = z.object({ note: z.string().trim().min(1).max(300) });

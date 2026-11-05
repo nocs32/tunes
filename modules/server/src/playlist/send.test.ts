@@ -33,7 +33,7 @@ const seedRun = (db: Db): number => {
     tracks: ['t1', 't2', 't3'].map((id, position) => ({ position, track: track(id), reason: 'r', kind: 'close', known: false, removed: false })),
     usage: null,
     durationMs: null,
-    seed: null,
+    seeds: [],
   });
 
   setRemoved(db, id, 1, true);

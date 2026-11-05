@@ -15,8 +15,15 @@ export const timeAgo = (timestamp: number, now = Date.now()): string => {
   return days === 1 ? 'yesterday' : `${days} days ago`;
 };
 
-// A mix's title: its mood, or the song it was built around, or "Your usual".
-export const mixTitle = (mood: string, seedTitle: string | null | undefined): string =>
-  mood || (seedTitle ? `More like “${seedTitle}”` : 'Your usual');
+// A mix's title: its mood, or the songs it was built around, or "Your usual".
+export const mixTitle = (mood: string, seedTitles: string[]): string => {
+  if (mood) return mood;
+
+  const [first, ...others] = seedTitles;
+
+  if (!first) return 'Your usual';
+
+  return others.length ? `More like “${first}” + ${others.length}` : `More like “${first}”`;
+};
 
 export const artistNames = (artists: { name: string }[]): string => artists.map((artist) => artist.name).join(', ');

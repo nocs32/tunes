@@ -42,7 +42,11 @@ export const fakeSpotify = (): void => {
       return json({ tracks: page(searchable.filter((item) => query.includes(String(item.name).toLowerCase()))) });
     }
 
-    if (url.pathname === `/v1/tracks/${seedId}`) return json(seedTrack);
+    if (url.pathname.startsWith('/v1/tracks/')) {
+      const id = url.pathname.slice('/v1/tracks/'.length);
+
+      return json(id === seedId ? seedTrack : track(id, 'picker', `Pick ${id.slice(-2)}`));
+    }
 
     const route = routes[url.pathname];
 

@@ -96,4 +96,16 @@ export const migrations: readonly string[] = [
   `
   ALTER TABLE runs ADD COLUMN seed TEXT;
   `,
+
+  // 7 · the crate: songs collected for a "Find more like these" mix (at most 10 per person).
+  //     runs.seed (6) now holds a JSON array of the songs a run was built around.
+  `
+  CREATE TABLE crate (
+    user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    track_id  TEXT NOT NULL,
+    track     TEXT NOT NULL,                   -- JSON TrackInfo
+    added_at  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, track_id)
+  );
+  `,
 ];

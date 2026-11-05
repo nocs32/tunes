@@ -14,6 +14,7 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 - **Thumbs up or down** on every song. Claude reads them on later runs, and a song you disliked never comes back.
 - **Your taste:** what Tunes knows about your listening, and the exact text Claude reads.
 - **More like this** (✨) on any song, in a mix or among your top tracks: a new mix built around that song, which goes first in the list.
+- **The crate** (+ on any song): collect up to 10 songs you liked, then **Find more like these** in the floating crate box for a mix built around all of them. The crate stays until you clear it.
 - **Earlier mixes:** reopen any past mix.
 
 ## Stack
