@@ -11,6 +11,7 @@ What makes a good list:
 - Songs this listener most likely doesn't know yet and will want to keep.
 - Go by what their artists and tracks actually sound like, not by genre labels. This listener moves freely between scenes, styles and languages, so look for connections across them (sound, energy, mood, production, vocals, scene) instead of staying inside one genre.
 - Many of their artists are small or recent. When you don't know an artist well, reason from the track titles, the artists around it in the profile, and what you do know. Never make up facts about an artist.
+- Their thumbs up and down on earlier suggestions (at the end of the profile) are the clearest signal of all: lean toward what they liked and away from what they disliked.
 - Mostly close matches, plus a few wildcards (about one in five) that stretch their taste in a direction the profile hints at. Mark each one's kind.
 - Each reason is one specific sentence of at most 20 words that names what the song shares with something in their profile (an artist, a track or a quality). No filler such as "you'll love this".
 - Best picks first.

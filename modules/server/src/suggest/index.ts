@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { requireUser } from '../auth/index.ts';
 import type { UserEnv } from '../context.ts';
 import { NotFound } from '../errors.ts';
+import { setVote } from '../feedback/index.ts';
 import { sendRun } from '../playlist/index.ts';
 import { discoveryLevels } from './prompt.ts';
 import { createRun } from './run.ts';
-import { getRun, latestRun, type Run, setRemoved } from './store.ts';
+import { getRun, latestRun, listRuns, type Run, setRemoved } from './store.ts';
 
 export * from './claude.ts';
 export type { Discovery } from './prompt.ts';
@@ -16,7 +17,10 @@ export type { Run, RunTrack } from './store.ts';
 // /api/runs — suggestion runs.
 //   POST /                         { mood, discovery } → a new run (takes a minute or two)
 //   POST /:id/refine               { note } → a new run that follows the note
+//   GET  /                         → { runs }: earlier runs, newest first
 //   GET  /latest                   → { run } or { run: null }
+//   GET  /:id                      → one run
+//   PUT  /:id/tracks/:position/vote  { vote: up | down | null } → thumbs up / down, or take it back
 //   PUT  /:id/tracks/:position     { removed } → take a song out of the list, or put it back
 //   POST /:id/playlist             { mode: rolling | new } → send the list to a Spotify playlist
 
@@ -30,6 +34,8 @@ const refineBody = z.object({ note: z.string().trim().min(1).max(300) });
 const removedBody = z.object({ removed: z.boolean() });
 
 const playlistBody = z.object({ mode: z.enum(['rolling', 'new']) });
+
+const voteBody = z.object({ vote: z.enum(['up', 'down']).nullable() });
 
 const ownRun = (c: Context<UserEnv>): Run => {
   const run = getRun(c.var.db, c.var.user.id, Number(c.req.param('id')));
@@ -49,7 +55,9 @@ const deps = (c: Context<UserEnv>): Parameters<typeof createRun>[0] => ({
 export const runRoutes = new Hono()
   .use(requireUser)
   .post('/', zValidator('json', runBody), async (c) => c.json(await createRun(deps(c), c.req.valid('json'))))
+  .get('/', (c) => c.json({ runs: listRuns(c.var.db, c.var.user.id) }))
   .get('/latest', (c) => c.json({ run: latestRun(c.var.db, c.var.user.id) ?? null }))
+  .get('/:id', (c) => c.json(ownRun(c)))
   .post('/:id/refine', zValidator('json', refineBody), async (c) => {
     const parent = ownRun(c);
     const input = { mood: parent.mood, discovery: parent.discovery, refineOf: parent, note: c.req.valid('json').note };
@@ -62,6 +70,16 @@ export const runRoutes = new Hono()
     setRemoved(c.var.db, run.id, Number(c.req.param('position')), c.req.valid('json').removed);
 
     return c.json({ ok: true });
+  })
+  .put('/:id/tracks/:position/vote', zValidator('json', voteBody), (c) => {
+    const run = ownRun(c);
+    const item = run.tracks.find((entry) => entry.position === Number(c.req.param('position')));
+
+    if (!item) throw new NotFound('That song isn’t in this run.');
+
+    setVote(c.var.db, c.var.user.id, item.track, c.req.valid('json').vote, run.id);
+
+    return c.json({ vote: c.req.valid('json').vote });
   })
   .post('/:id/playlist', zValidator('json', playlistBody), async (c) => {
     const sent = await sendRun({ db: c.var.db, env: c.var.env, userId: c.var.user.id }, ownRun(c), c.req.valid('json').mode);

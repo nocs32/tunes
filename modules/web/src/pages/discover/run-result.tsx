@@ -6,10 +6,12 @@ import { Textarea } from '@/components/ui/textarea.tsx';
 import { timeAgo } from '@/format.ts';
 import { SendPanel } from './send-panel.tsx';
 import { TrackRow } from './track-row.tsx';
+import type { TrackEdits } from './use-runs.ts';
 
 const dropLabel: Record<Run['dropped'][number]['reason'], string> = {
   not_found: 'not on Spotify',
   duplicate: 'a repeat',
+  disliked: 'you gave it a thumbs down',
   known_artist: 'an artist you know',
 };
 
@@ -88,18 +90,22 @@ type RunResultProps = {
   busy: boolean;
   playlistMode: PlaylistMode;
   onRefine: (note: string) => void;
-  onRemove: (position: number, removed: boolean) => void;
-  onSent: (playlist: NonNullable<Run['playlist']>) => void;
+  edits: TrackEdits;
 };
 
-export function RunResult({ run, busy, playlistMode, onRefine, onRemove, onSent }: RunResultProps): ReactElement {
+export function RunResult({ run, busy, playlistMode, onRefine, edits }: RunResultProps): ReactElement {
   return (
     <section className="flex flex-col gap-6" aria-label="Suggestions">
       <TapeLabel run={run} />
-      <SendPanel key={run.id} run={run} initialMode={playlistMode} onSent={onSent} />
+      <SendPanel key={run.id} run={run} initialMode={playlistMode} onSent={edits.setSent} />
       <ol className="divide-border divide-y">
         {run.tracks.map((item) => (
-          <TrackRow key={item.position} item={item} onRemove={(removed) => onRemove(item.position, removed)} />
+          <TrackRow
+            key={item.position}
+            item={item}
+            onRemove={(removed) => edits.setRemoved(item.position, removed)}
+            onVote={(vote) => edits.setVote(item.position, vote)}
+          />
         ))}
       </ol>
       <DroppedList dropped={run.dropped} asked={run.asked} />

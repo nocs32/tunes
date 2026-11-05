@@ -1,5 +1,6 @@
 import type { Db } from '../db/index.ts';
 import type { Env } from '../env.ts';
+import { type Vote, votedSets } from '../feedback/index.ts';
 import { libraryContains, spotifyFor } from '../spotify/index.ts';
 import { loadProfile, type Known, type TrackInfo } from '../taste/index.ts';
 import type { Suggestion, SuggestClient } from './claude.ts';
@@ -17,13 +18,21 @@ export type RunInput = { mood: string; discovery: Discovery; refineOf?: Run; not
 
 type RunDeps = { db: Db; env: Env; claude: SuggestClient; userId: string };
 
-type Selection = { tracks: Omit<RunTrack, 'removed'>[]; dropped: Dropped[] };
+type Selection = { tracks: Omit<RunTrack, 'removed' | 'vote'>[]; dropped: Dropped[] };
 
-// Walks Claude's list in order. Songs Spotify doesn't have, repeats, and (on Adventurous) songs
-// by artists you already know are dropped with a reason; songs you know are kept and labelled (D14).
-export const selectTracks = (suggestions: Suggestion[], found: (TrackInfo | null)[], known: Known, discovery: Discovery): Selection => {
+// Walks Claude's list in order. Songs Spotify doesn't have, repeats, songs you gave a thumbs down,
+// and (on Adventurous) songs by artists you already know are dropped with a reason; songs you know
+// (including ones you liked before) are kept and labelled (D14).
+export const selectTracks = (
+  suggestions: Suggestion[],
+  found: (TrackInfo | null)[],
+  known: Known,
+  discovery: Discovery,
+  voted: Record<Vote, Set<string>> = { up: new Set(), down: new Set() },
+): Selection => {
   const knownUris = new Set(known.trackUris);
   const knownIsrcs = new Set(known.isrcs);
+  const votedOn = (track: TrackInfo, vote: Vote): boolean => voted[vote].has(track.id) || Boolean(track.isrc && voted[vote].has(track.isrc));
   const knownArtists = new Set(known.artistIds);
   const seen = new Set<string>();
   const selection: Selection = { tracks: [], dropped: [] };
@@ -39,6 +48,8 @@ export const selectTracks = (suggestions: Suggestion[], found: (TrackInfo | null
 
     if (seen.has(track.id) || (track.isrc && seen.has(track.isrc))) return drop('duplicate');
 
+    if (votedOn(track, 'down')) return drop('disliked');
+
     if (discovery === 'adventurous' && track.artists.some((artist) => knownArtists.has(artist.id))) return drop('known_artist');
 
     if (selection.tracks.length >= keepCount) return;
@@ -47,7 +58,7 @@ export const selectTracks = (suggestions: Suggestion[], found: (TrackInfo | null
 
     if (track.isrc) seen.add(track.isrc);
 
-    const isKnown = knownUris.has(track.uri) || Boolean(track.isrc && knownIsrcs.has(track.isrc));
+    const isKnown = knownUris.has(track.uri) || Boolean(track.isrc && knownIsrcs.has(track.isrc)) || votedOn(track, 'up');
 
     selection.tracks.push({ position: selection.tracks.length, track, reason: suggestion.reason, kind: suggestion.kind, known: isKnown });
   });
@@ -83,7 +94,7 @@ export const createRun = async ({ db, env, claude, userId }: RunDeps, input: Run
   const answer = await claude.ask({ system, user });
   const wanted = answer.suggestions.map((item) => ({ artist: item.artist, title: item.title, artistAlt: item.artist_alt, titleAlt: item.title_alt }));
   const found = await verifyAll(db, get, wanted);
-  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery);
+  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery, votedSets(db, userId));
 
   await markSaved(get, selection.tracks);
 
@@ -95,7 +106,7 @@ export const createRun = async ({ db, env, claude, userId }: RunDeps, input: Run
     note: input.note ?? null,
     asked: answer.suggestions.length,
     dropped: selection.dropped,
-    tracks: selection.tracks.map((item) => ({ ...item, removed: false })),
+    tracks: selection.tracks,
     usage: answer.usage,
     durationMs: Date.now() - started,
   });
