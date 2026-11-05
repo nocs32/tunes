@@ -64,10 +64,10 @@ describe('refine and remove', () => {
     const claude = fakeClaude(suggestions);
     const { app, cookie } = loggedInApp(claude);
     const headers = { Cookie: cookie, 'Content-Type': 'application/json' };
-    const first = (await (await app.request('/api/runs', { method: 'POST', headers, body: '{"discovery":"close"}' })).json()) as Run;
+    const first = (await (await postRun(app, cookie, { discovery: 'close' })).json()) as Run;
 
     await app.request(`/api/runs/${first.id}/tracks/0`, { method: 'PUT', headers, body: '{"removed":true}' });
-    const refined = (await (await app.request(`/api/runs/${first.id}/refine`, { method: 'POST', headers, body: '{"note":"less sad"}' })).json()) as Run;
+    const refined = (await (await postRun(app, cookie, { note: 'less sad' }, `/api/runs/${first.id}/refine`)).json()) as Run;
     const latest = (await (await app.request('/api/runs/latest', { headers })).json()) as { run: Run };
 
     expect(claude.prompts[1]).toContain('<previous_list>\n- NEWBIE — New Song');
