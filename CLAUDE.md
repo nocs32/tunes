@@ -9,6 +9,9 @@ Spec §5 lists what was checked against developer.spotify.com on 2026-11-05: wha
 
 **Never show a track that wasn't found on Spotify.** Claude can invent songs; verification is the point.
 
+## Hosting
+Live on the Pi through `../tables-host` at https://tunes.timnox.dev (service `tunes`, own `Dockerfile`, volume `tunes-data`, settings in the Pi's `~/tables-host/secrets/tunes.env`). Config only in tables-host: not in its README, not on library.timnox.dev. Update after merging: `ssh pi 'cd ~/tables-host && ./deploy.sh tunes'`. Never prune the Pi's build cache.
+
 ## How we work
 Like the sibling projects (Cinemate, the tables): a setup commit (M0), then a branch and PR per milestone (M1 login + taste profile, M2 suggestions + refine, M3 playlist, M4 feedback, M5 deploy). **Stop for the user's review before each PR, and ask before merging.** No CI runs: the user is out of GitHub Actions minutes.
 
@@ -42,6 +45,7 @@ A mixtape J-card: each run's mood is the tape title on a pink label band (Unboun
   - `src/spotify/`: `accounts.ts` (authorize URL, token exchange and refresh, scopes), `client.ts` (`spotifyFetch`: 429 handling), `api.ts` (typed calls), `index.ts` (`accessTokenFor`: refreshes a minute early, one refresh per user at a time; a dead login deletes that user's sessions).
   - `src/suggest/`: `prompt.ts` (system prompt + user message), `claude.ts` (Opus 5.5, effort high, `messages.parse` + `zodOutputFormat`, refusals → `ClaudeRefused`, no fallback model), `match.ts` (normalizing, artist/title matching, alternate spellings, search queries), `verify.ts` (search + 14-day cache, 4 at a time), `run.ts` (pipeline: ask 35, keep 25, label known, drop not-found/repeats/known artists on Adventurous), `store.ts` (runs, run_tracks), `index.ts` (`/api/runs`).
   - `src/playlist/`: `sendRun` (rolling "Tunes" playlist replaced each time, re-created if it's no longer in the library; or a new dated playlist). Spotify ignores `public: false`, see the comment there.
+  - `src/jobs/`: runs (and reworks) are background jobs: `POST` answers 202 `{ jobId }`, the page polls `GET /api/runs/jobs/:jobId` every 3 s. Needed because Cloudflare cuts off requests after 100 s and runs take 75–130 s. In memory, kept an hour. Tests use `finishJob` / `postRun` from `suggest/fakes.ts`.
   - `src/feedback/`: thumbs up / down (one vote per song per person). `feedbackText` is appended to the profile text in `loadProfile` (never cached); `votedSets` drops disliked songs from new runs and labels liked ones as known.
   - `src/taste/`: `collect.ts` (all Spotify reads, slimmed), `profile.ts` (ranked artists with trend, representative tracks, known sets), `prompt-text.ts` (what Claude reads), `index.ts` (`loadProfile`, cached 6 h in `api_cache`; `GET /api/taste`, `POST /api/taste/refresh`).
   - `src/db/`: `node:sqlite`, migrations in `migrations.ts` (append only; `user_version` counts them).
