@@ -74,4 +74,21 @@ export const migrations: readonly string[] = [
   ALTER TABLE runs ADD COLUMN playlist_name TEXT;
   ALTER TABLE runs ADD COLUMN sent_at INTEGER;
   `,
+
+  // 5 · thumbs up / down on suggested songs (M4). One vote per song per person.
+  `
+  CREATE TABLE feedback (
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    track_id    TEXT NOT NULL,                 -- Spotify track id
+    isrc        TEXT,
+    artist      TEXT NOT NULL,                 -- for the profile text
+    title       TEXT NOT NULL,
+    vote        TEXT NOT NULL,                 -- up | down
+    run_id      INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    created_at  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, track_id)
+  );
+
+  CREATE INDEX feedback_recent ON feedback(user_id, created_at);
+  `,
 ];

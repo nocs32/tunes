@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, api, type Discovery, isLoggedOut, type Run, unwrap } from '@/api.ts';
+import { ApiError, api, type Discovery, isLoggedOut, type Run, type RunTrack, unwrap } from '@/api.ts';
 
 // A failed run remembers what was tried, so Retry repeats exactly that (D18).
 export type RunError = { message: string; refused: boolean; retry: () => void };
@@ -12,8 +12,36 @@ export type RunsState = {
   error: RunError | null;
   start: (mood: string, discovery: Discovery) => void;
   refine: (note: string) => void;
+  open: (runId: number) => void;
+} & TrackEdits;
+
+export type TrackEdits = {
   setRemoved: (position: number, removed: boolean) => void;
+  setVote: (position: number, vote: RunTrack['vote']) => void;
   setSent: (playlist: NonNullable<Run['playlist']>) => void;
+};
+
+// Changes to one run's songs: shown at once, saved in the background.
+const useTrackEdits = (run: Run | null, setRun: (run: Run) => void): TrackEdits => {
+  const update = (position: number, change: Partial<RunTrack>): void => {
+    if (run) setRun({ ...run, tracks: run.tracks.map((item) => (item.position === position ? { ...item, ...change } : item)) });
+  };
+
+  const params = (position: number): { id: string; position: string } => ({ id: String(run?.id), position: String(position) });
+
+  return {
+    setRemoved: (position, removed) => {
+      update(position, { removed });
+      api.runs[':id'].tracks[':position'].$put({ param: params(position), json: { removed } });
+    },
+    setVote: (position, vote) => {
+      update(position, { vote });
+      api.runs[':id'].tracks[':position'].vote.$put({ param: params(position), json: { vote } });
+    },
+    setSent: (playlist) => {
+      if (run) setRun({ ...run, playlist });
+    },
+  };
 };
 
 type Requests = { busy: Busy; error: RunError | null; go: (kind: 'new' | 'refine', request: () => Promise<Run>) => void };
@@ -65,16 +93,11 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
     if (run) go('refine', () => unwrap(api.runs[':id'].refine.$post({ param: { id: String(run.id) }, json: { note } })));
   };
 
-  const setRemoved = (position: number, removed: boolean): void => {
-    if (!run) return;
-
-    setRun({ ...run, tracks: run.tracks.map((item) => (item.position === position ? { ...item, removed } : item)) });
-    api.runs[':id'].tracks[':position'].$put({ param: { id: String(run.id), position: String(position) }, json: { removed } });
+  const open = (runId: number): void => {
+    unwrap(api.runs[':id'].$get({ param: { id: String(runId) } }))
+      .then(setRun)
+      .catch(() => undefined);
   };
 
-  const setSent = (playlist: NonNullable<Run['playlist']>): void => {
-    if (run) setRun({ ...run, playlist });
-  };
-
-  return { run, busy, error, start, refine, setRemoved, setSent };
+  return { run, busy, error, start, refine, open, ...useTrackEdits(run, setRun) };
 };

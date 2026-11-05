@@ -2,6 +2,7 @@ import { type ReactElement, useEffect, useState } from 'react';
 import type { PlaylistMode } from '@/api.ts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert.tsx';
 import { Button } from '@/components/ui/button.tsx';
+import { EarlierMixes } from './earlier-mixes.tsx';
 import { RunForm } from './run-form.tsx';
 import { RunResult } from './run-result.tsx';
 import { type RunError, useRuns } from './use-runs.ts';
@@ -44,7 +45,12 @@ function Failed({ error }: { error: RunError }): ReactElement {
 type DiscoverPanelProps = { playlistMode: PlaylistMode; onLoggedOut: (message: string | null) => void };
 
 export function DiscoverPanel({ playlistMode, onLoggedOut }: DiscoverPanelProps): ReactElement {
-  const { run, busy, error, start, refine, setRemoved, setSent } = useRuns(onLoggedOut);
+  const { run, busy, error, start, refine, open, setRemoved, setVote, setSent } = useRuns(onLoggedOut);
+
+  const openRun = (runId: number): void => {
+    open(runId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="flex flex-col gap-10">
@@ -52,8 +58,15 @@ export function DiscoverPanel({ playlistMode, onLoggedOut }: DiscoverPanelProps)
       {busy && <Working refining={busy === 'refine'} />}
       {error && !busy && <Failed error={error} />}
       {run && (
-        <RunResult run={run} busy={busy !== null} playlistMode={playlistMode} onRefine={refine} onRemove={setRemoved} onSent={setSent} />
+        <RunResult
+          run={run}
+          busy={busy !== null}
+          playlistMode={playlistMode}
+          onRefine={refine}
+          edits={{ setRemoved, setVote, setSent }}
+        />
       )}
+      <EarlierMixes currentId={run?.id} onOpen={openRun} />
     </div>
   );
 }

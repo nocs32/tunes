@@ -9,6 +9,7 @@ export type Taste = InferResponseType<typeof api.taste.$get, 200>;
 export type Profile = Taste['profile'];
 export type Run = InferResponseType<typeof api.runs.$post, 200>;
 export type RunTrack = Run['tracks'][number];
+export type RunSummary = InferResponseType<typeof api.runs.$get, 200>['runs'][number];
 export type Discovery = Run['discovery'];
 export type PlaylistMode = Me['playlistMode'];
 

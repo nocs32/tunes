@@ -43,7 +43,7 @@ export function ClaudeView({ text }: { text: string }): ReactElement {
     <div className="flex flex-col gap-3">
       <p className="text-muted-foreground text-sm">
         This is everything about your taste that Claude will read when it suggests music (about{' '}
-        {Math.round(text.length / 4).toLocaleString()} tokens). Your thumbs up and down will be added here later.
+        {Math.round(text.length / 4).toLocaleString()} tokens). Your latest thumbs up and down are at the end.
       </p>
       <pre className="bg-muted max-h-[32rem] overflow-auto rounded-md p-4 text-xs leading-relaxed whitespace-pre-wrap">{text}</pre>
     </div>
