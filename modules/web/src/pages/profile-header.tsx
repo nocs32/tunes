@@ -12,19 +12,17 @@ export function ProfileHeader({ me, onLoggedOut }: ProfileHeaderProps): ReactEle
 
   return (
     <header className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
-        <Avatar className="size-10">
+      <h1 className="font-display text-2xl font-bold tracking-tight">Tunes</h1>
+      <div className="flex items-center gap-2">
+        <Avatar className="size-7">
           {me.imageUrl && <AvatarImage src={me.imageUrl} alt="" />}
-          <AvatarFallback>{me.displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="text-xs">{me.displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
         </Avatar>
-        <div>
-          <h1 className="text-xl font-semibold leading-tight">Tunes</h1>
-          <p className="text-muted-foreground text-sm">Logged in as {me.displayName}</p>
-        </div>
+        <span className="text-muted-foreground hidden text-sm sm:inline">{me.displayName}</span>
+        <Button variant="ghost" size="sm" onClick={logOut}>
+          Log out
+        </Button>
       </div>
-      <Button variant="ghost" size="sm" onClick={logOut}>
-        Log out
-      </Button>
     </header>
   );
 }

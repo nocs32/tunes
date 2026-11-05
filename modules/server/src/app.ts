@@ -4,6 +4,7 @@ import type { AppEnv } from './context.ts';
 import type { Db } from './db/index.ts';
 import type { Env } from './env.ts';
 import { handleError } from './errors.ts';
+import { createClaude, runRoutes, type SuggestClient } from './suggest/index.ts';
 import { tasteRoutes } from './taste/index.ts';
 
 export type { AppEnv, UserEnv } from './context.ts';
@@ -25,16 +26,18 @@ export const api = new Hono<AppEnv>()
   })
   .route('/auth', authRoutes)
   .route('/me', meRoutes)
-  .route('/taste', tasteRoutes);
+  .route('/taste', tasteRoutes)
+  .route('/runs', runRoutes);
 
 export type AppType = typeof api;
 
 // The API with its dependencies plugged in. Used by the server and by tests.
-export const createApp = (db: Db, env: Env): Hono<AppEnv> =>
+export const createApp = (db: Db, env: Env, claude: SuggestClient = createClaude(env.ANTHROPIC_API_KEY)): Hono<AppEnv> =>
   new Hono<AppEnv>()
     .use(async (c, next) => {
       c.set('db', db);
       c.set('env', env);
+      c.set('claude', claude);
       await next();
     })
     .route('/', api)

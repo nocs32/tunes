@@ -1,6 +1,6 @@
 import { type ReactElement, useCallback, useEffect, useState } from 'react';
 import { api, isLoggedOut, type Me, unwrap } from './api.ts';
-import { LoginPage, ProfilePage } from './pages/index.ts';
+import { LoginPage, MainPage } from './pages/index.ts';
 
 const loginNotices: Record<string, string> = {
   denied: 'Login was cancelled on Spotify.',
@@ -51,5 +51,5 @@ export function App(): ReactElement | null {
 
   if (!me) return <LoginPage notice={notice ?? meError} />;
 
-  return <ProfilePage me={me} onLoggedOut={loggedOut} />;
+  return <MainPage me={me} onLoggedOut={loggedOut} />;
 }

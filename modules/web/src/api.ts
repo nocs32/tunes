@@ -7,6 +7,9 @@ export const api = hc<AppType>('/').api;
 export type Me = InferResponseType<typeof api.me.$get, 200>;
 export type Taste = InferResponseType<typeof api.taste.$get, 200>;
 export type Profile = Taste['profile'];
+export type Run = InferResponseType<typeof api.runs.$post, 200>;
+export type RunTrack = Run['tracks'][number];
+export type Discovery = Run['discovery'];
 
 // Every server error is `{ error, message }`; `code` says what kind (e.g. "relogin").
 export class ApiError extends Error {
@@ -22,13 +25,18 @@ export class ApiError extends Error {
 export const isLoggedOut = (error: unknown): error is ApiError =>
   error instanceof ApiError && (error.code === 'logged_out' || error.code === 'relogin');
 
+type Reply = { ok: boolean; status: number; json: () => Promise<unknown> };
+
+// A route's success body: the JSON it can return, minus the validator's 400 reply.
+type Success<R> = Exclude<R extends { json: () => Promise<infer J> } ? J : never, { success: false }>;
+
 // The response's JSON, or an ApiError with the server's message.
-export const unwrap = async <T>(request: Promise<{ ok: boolean; status: number; json: () => Promise<T> }>): Promise<T> => {
+export const unwrap = async <R extends Reply>(request: Promise<R>): Promise<Success<R>> => {
   const response = await request.catch(() => {
     throw new ApiError('network', 'Can’t reach the Tunes server.');
   });
 
-  if (response.ok) return response.json();
+  if (response.ok) return (await response.json()) as Success<R>;
 
   const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
 

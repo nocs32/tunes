@@ -16,14 +16,16 @@ const trendHelp: Record<Artist['trend'], string> = {
   older: 'Only in your 1-year list',
 };
 
+// "#2 for 4 weeks, #2 for 6 months, #6 for the year", skipping lists the artist isn't in.
 const rankText = (ranks: Artist['ranks']): string =>
   [
-    ['4 wk', ranks.short_term],
-    ['6 mo', ranks.medium_term],
-    ['1 yr', ranks.long_term],
+    ['4 weeks', ranks.short_term],
+    ['6 months', ranks.medium_term],
+    ['the year', ranks.long_term],
   ]
-    .map(([label, rank]) => `${label} ${rank ? `#${rank}` : '–'}`)
-    .join(' · ');
+    .filter(([, rank]) => rank)
+    .map(([label, rank]) => `#${rank} for ${label}`)
+    .join(', ');
 
 function ArtistRow({ artist, position }: { artist: Artist; position: number }): ReactElement {
   return (
@@ -38,7 +40,7 @@ function ArtistRow({ artist, position }: { artist: Artist; position: number }): 
         <p className="truncate font-medium">{artist.name}</p>
         <p className="text-muted-foreground truncate text-xs">
           {rankText(artist.ranks)}
-          {artist.genres.length > 0 && ` · ${artist.genres.slice(0, 3).join(', ')}`}
+          {artist.genres.length > 0 && `; ${artist.genres.slice(0, 3).join(', ')}`}
         </p>
       </div>
       <Badge variant={artist.trend === 'rising' ? 'default' : 'secondary'} title={trendHelp[artist.trend]}>

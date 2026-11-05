@@ -16,6 +16,12 @@ Like the sibling projects (Cinemate, the tables): a setup commit (M0), then a br
 
 **Explain infrastructure plainly** (servers, OAuth, tunnels): the user knows Docker and tooling but is new to backends.
 
+## The look (frontend-design pass, `.scratch/look-notes.md`)
+A mixtape J-card: each run's mood is the tape title on a pink label band (Unbounded), the numbered tracklist sits under it. Keep the band the only loud element.
+- Colours are tokens in `modules/web/src/index.css`: cool paper / navy ink, one marker pink (`--primary`). Pink is a fill only, never small text on the light background (2.7:1). Dark mode is navy, not black.
+- Type: `font-display` (Unbounded) only for the wordmark and tape titles; Onest for everything else. Japanese falls back to system fonts.
+- No cards around everything, no "A · B · C" meta strings, no all-caps labels: plain sentences.
+
 ## House lint rules (copied from the siblings, enforced by `pnpm lint`)
 - **Size:** at most 40 lines per function (components included) and 300 lines per file. Blank lines and comments don't count.
 - **Nested functions:** inside a function, only arrow functions.
@@ -34,10 +40,13 @@ Like the sibling projects (Cinemate, the tables): a setup commit (M0), then a br
   - `src/errors.ts`: `ReloginNeeded`, `SpotifyError`, `SpotifyBusy` → `{ error, message }` responses the page explains.
   - `src/auth/`: PKCE login (`routes.ts`), AES-GCM token encryption (`crypto.ts`), sessions (`tunes_session` cookie, 90 days), `requireUser`.
   - `src/spotify/`: `accounts.ts` (authorize URL, token exchange and refresh, scopes), `client.ts` (`spotifyFetch`: 429 handling), `api.ts` (typed calls), `index.ts` (`accessTokenFor`: refreshes a minute early, one refresh per user at a time; a dead login deletes that user's sessions).
+  - `src/suggest/`: `prompt.ts` (system prompt + user message), `claude.ts` (Opus 5.5, effort high, `messages.parse` + `zodOutputFormat`, refusals → `ClaudeRefused`, no fallback model), `match.ts` (normalizing, artist/title matching, alternate spellings, search queries), `verify.ts` (search + 14-day cache, 4 at a time), `run.ts` (pipeline: ask 35, keep 25, label known, drop not-found/repeats/known artists on Adventurous), `store.ts` (runs, run_tracks), `index.ts` (`/api/runs`).
   - `src/taste/`: `collect.ts` (all Spotify reads, slimmed), `profile.ts` (ranked artists with trend, representative tracks, known sets), `prompt-text.ts` (what Claude reads), `index.ts` (`loadProfile`, cached 6 h in `api_cache`; `GET /api/taste`, `POST /api/taste/refresh`).
   - `src/db/`: `node:sqlite`, migrations in `migrations.ts` (append only; `user_version` counts them).
   - Tests sit next to the code (`*.test.ts`, vitest), named after what they test, never after their folder. `src/testing.ts` has `testApp`, `mockFetch`, `cookiesFrom`.
 - `modules/web`: Vite + React 19 + Tailwind 4 + shadcn/ui (new-york, neutral; follows the system's dark mode). `src/api.ts` is the typed client plus `unwrap` (JSON or an `ApiError` with the server's message). `src/app.tsx` picks the login or profile page; `src/pages/`.
 - **Logging in while testing:** the user signs in to Spotify themselves in the browser pane; never type their credentials. The session cookie then stays in the pane.
 - Ports: web 5180, server 2574, web preview 4180.
-- `.env` at the repo root (git-ignored): `SPOTIFY_CLIENT_ID`, `TOKEN_KEY` (never change it: it logs everyone out), later `ANTHROPIC_API_KEY`. See `.env.example`.
+- `.env` at the repo root (git-ignored): `SPOTIFY_CLIENT_ID`, `TOKEN_KEY` (never change it: it logs everyone out), `ANTHROPIC_API_KEY`. See `.env.example`.
+- **Real runs cost money** (~$0.13–0.17 each on Opus 5.5, 75–95 s). Test the pipeline with `fakeClaude` in tests; do a real run only to check prompt or matching changes, and say so.
+- **Spotify shows some artists and titles romanized** (米津玄師 → Kenshi Yonezu, 廻廻奇譚 → Kaikai Kitan). Claude gives `artist_alt` / `title_alt`; matching accepts either. Changing matching? Bump the `search2:` cache key in `verify.ts` so old misses aren't trusted.
