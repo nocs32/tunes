@@ -5,6 +5,7 @@ import { requireUser } from '../auth/index.ts';
 import type { UserEnv } from '../context.ts';
 import { NotFound } from '../errors.ts';
 import { setVote } from '../feedback/index.ts';
+import { getJob, startJob } from '../jobs/index.ts';
 import { sendRun } from '../playlist/index.ts';
 import { discoveryLevels } from './prompt.ts';
 import { createRun } from './run.ts';
@@ -15,8 +16,9 @@ export type { Discovery } from './prompt.ts';
 export type { Run, RunTrack } from './store.ts';
 
 // /api/runs — suggestion runs.
-//   POST /                         { mood, discovery } → a new run (takes a minute or two)
-//   POST /:id/refine               { note } → a new run that follows the note
+//   POST /                         { mood, discovery } → { jobId }: a new run, started in the background
+//   POST /:id/refine               { note } → { jobId }: a new run that follows the note
+//   GET  /jobs/:jobId              → { status: running | done (with run) | failed (with error) }
 //   GET  /                         → { runs }: earlier runs, newest first
 //   GET  /latest                   → { run } or { run: null }
 //   GET  /:id                      → one run
@@ -54,15 +56,26 @@ const deps = (c: Context<UserEnv>): Parameters<typeof createRun>[0] => ({
 
 export const runRoutes = new Hono()
   .use(requireUser)
-  .post('/', zValidator('json', runBody), async (c) => c.json(await createRun(deps(c), c.req.valid('json'))))
+  .post('/', zValidator('json', runBody), (c) => {
+    const input = c.req.valid('json');
+
+    return c.json({ jobId: startJob(c.var.user.id, () => createRun(deps(c), input)) }, 202);
+  })
+  .get('/jobs/:jobId', (c) => {
+    const job = getJob<Run>(c.req.param('jobId'), c.var.user.id);
+
+    if (!job) throw new NotFound('That run is no longer known to the server (it may have restarted). Please retry.');
+
+    return c.json(job);
+  })
   .get('/', (c) => c.json({ runs: listRuns(c.var.db, c.var.user.id) }))
   .get('/latest', (c) => c.json({ run: latestRun(c.var.db, c.var.user.id) ?? null }))
   .get('/:id', (c) => c.json(ownRun(c)))
-  .post('/:id/refine', zValidator('json', refineBody), async (c) => {
+  .post('/:id/refine', zValidator('json', refineBody), (c) => {
     const parent = ownRun(c);
     const input = { mood: parent.mood, discovery: parent.discovery, refineOf: parent, note: c.req.valid('json').note };
 
-    return c.json(await createRun(deps(c), input));
+    return c.json({ jobId: startJob(c.var.user.id, () => createRun(deps(c), input)) }, 202);
   })
   .put('/:id/tracks/:position', zValidator('json', removedBody), (c) => {
     const run = ownRun(c);

@@ -46,6 +46,24 @@ const useTrackEdits = (run: Run | null, setRun: (run: Run) => void): TrackEdits 
 
 type Requests = { busy: Busy; error: RunError | null; go: (kind: 'new' | 'refine', request: () => Promise<Run>) => void };
 
+const pollMs = 3000;
+
+// A run is a background job on the server (Cloudflare cuts requests off at 100 s, runs take ~90):
+// ask every few seconds until it's done or failed.
+const waitForRun = async (started: Promise<{ jobId: string }>): Promise<Run> => {
+  const { jobId } = await started;
+
+  for (;;) {
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+
+    const job = await unwrap(api.runs.jobs[':jobId'].$get({ param: { jobId } }));
+
+    if (job.status === 'done') return job.result;
+
+    if (job.status === 'failed') throw new ApiError(job.error.error, job.error.message);
+  }
+};
+
 // Runs one request at a time, with the busy flag, the error and its Retry.
 const useRunRequests = (setRun: (run: Run) => void, onLoggedOut: (message: string | null) => void): Requests => {
   const [busy, setBusy] = useState<Busy>(null);
@@ -87,10 +105,11 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
       .catch(() => undefined);
   }, []);
 
-  const start = (mood: string, discovery: Discovery): void => go('new', () => unwrap(api.runs.$post({ json: { mood, discovery } })));
+  const start = (mood: string, discovery: Discovery): void =>
+    go('new', () => waitForRun(unwrap(api.runs.$post({ json: { mood, discovery } }))));
 
   const refine = (note: string): void => {
-    if (run) go('refine', () => unwrap(api.runs[':id'].refine.$post({ param: { id: String(run.id) }, json: { note } })));
+    if (run) go('refine', () => waitForRun(unwrap(api.runs[':id'].refine.$post({ param: { id: String(run.id) }, json: { note } }))));
   };
 
   const open = (runId: number): void => {

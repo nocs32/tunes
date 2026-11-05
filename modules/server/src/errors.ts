@@ -56,9 +56,9 @@ export class BadRequest extends Error {}
 // Claude couldn't answer usefully: no API key, an API error, or an unusable answer.
 export class ClaudeFailed extends Error {}
 
-type ErrorBody = { error: string; message: string };
+export type ErrorBody = { error: string; message: string };
 
-const describe = (error: Error): [ContentfulStatusCode, ErrorBody] => {
+export const describeError = (error: Error): [ContentfulStatusCode, ErrorBody] => {
   if (error instanceof ReloginNeeded) return [401, { error: 'relogin', message: error.message }];
 
   if (error instanceof SpotifyBusy) return [503, { error: 'spotify_busy', message: error.message }];
@@ -83,7 +83,7 @@ const describe = (error: Error): [ContentfulStatusCode, ErrorBody] => {
 };
 
 export const handleError = (error: Error, c: Context): Response => {
-  const [status, body] = describe(error);
+  const [status, body] = describeError(error);
 
   if (status >= 500) {
     console.error(error);

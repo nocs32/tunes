@@ -56,11 +56,33 @@ export const suggestions: Suggestion[] = [
   { artist: 'KNOWN', title: 'Old Favourite', reason: 'You play this a lot.', kind: 'close', artist_alt: null, title_alt: null },
 ];
 
-export const postRun = (app: ReturnType<typeof loggedInApp>['app'], cookie: string, body: unknown): Promise<Response> =>
-  Promise.resolve(
-    app.request('/api/runs', {
-      method: 'POST',
-      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
-  );
+type TestApp = ReturnType<typeof loggedInApp>['app'];
+
+// Waits for a started run (POST returned { jobId }) and answers like the old synchronous route:
+// the run as JSON, or the error with its HTTP status.
+export const finishJob = async (app: TestApp, cookie: string, started: Response): Promise<Response> => {
+  const { jobId } = (await started.json()) as { jobId: string };
+
+  for (;;) {
+    const job = (await (await app.request(`/api/runs/jobs/${jobId}`, { headers: { Cookie: cookie } })).json()) as
+      | { status: 'running' }
+      | { status: 'done'; result: unknown }
+      | { status: 'failed'; httpStatus: number; error: unknown };
+
+    if (job.status === 'done') return json(job.result);
+
+    if (job.status === 'failed') return json(job.error, job.httpStatus);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+};
+
+export const postRun = async (app: TestApp, cookie: string, body: unknown, path = '/api/runs'): Promise<Response> => {
+  const started = await app.request(path, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return finishJob(app, cookie, started);
+};
