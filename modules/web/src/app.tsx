@@ -1,47 +1,55 @@
-import { type ReactElement, useEffect, useState } from 'react';
-import { api } from './api.ts';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.tsx';
+import { type ReactElement, useCallback, useEffect, useState } from 'react';
+import { api, isLoggedOut, type Me, unwrap } from './api.ts';
+import { LoginPage, ProfilePage } from './pages/index.ts';
 
-type ServerState = 'checking' | 'ok' | 'down';
+const loginNotices: Record<string, string> = {
+  denied: 'Login was cancelled on Spotify.',
+  failed:
+    'Login didn’t work. Try again. If it keeps failing, check that your Spotify account is on the app’s user list.',
+};
 
-const useServerState = (): ServerState => {
-  const [state, setState] = useState<ServerState>('checking');
+// Spotify's callback sends the browser back with ?login=denied|failed; show it once, then tidy the URL.
+const takeLoginNotice = (): string | null => {
+  const reason = new URLSearchParams(window.location.search).get('login');
+
+  if (reason) window.history.replaceState(null, '', '/');
+
+  return reason ? (loginNotices[reason] ?? null) : null;
+};
+
+// undefined while checking, null when logged out.
+const useMe = (): [Me | null | undefined, (me: null) => void, string | null] => {
+  const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.health
-      .$get()
-      .then(async (response) => setState((await response.json()).ok ? 'ok' : 'down'))
-      .catch(() => setState('down'));
+    unwrap(api.me.$get())
+      .then(setMe)
+      .catch((reason: unknown) => {
+        setMe(null);
+
+        if (!isLoggedOut(reason)) setError(reason instanceof Error ? reason.message : String(reason));
+      });
   }, []);
 
-  return state;
+  return [me, setMe, error];
 };
 
-const serverLabel: Record<ServerState, string> = {
-  checking: 'Checking server…',
-  ok: 'Server OK',
-  down: 'Server not reachable',
-};
+export function App(): ReactElement | null {
+  const [me, setMe, meError] = useMe();
+  const [notice, setNotice] = useState<string | null>(takeLoginNotice);
 
-// M0 placeholder: proves the page, the server and the database talk to each other.
-// M1 replaces it with the Spotify login and the taste profile.
-export function App(): ReactElement {
-  const server = useServerState();
-
-  return (
-    <main className="mx-auto flex min-h-svh max-w-xl flex-col justify-center gap-6 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Tunes</CardTitle>
-          <CardDescription>New music picked from your Spotify taste, checked on Spotify, sent to a playlist.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-4">
-          <Badge variant={server === 'down' ? 'destructive' : 'secondary'}>{serverLabel[server]}</Badge>
-          <Button disabled>Log in with Spotify (M1)</Button>
-        </CardContent>
-      </Card>
-    </main>
+  const loggedOut = useCallback(
+    (message: string | null) => {
+      setNotice(message);
+      setMe(null);
+    },
+    [setMe],
   );
+
+  if (me === undefined) return null;
+
+  if (!me) return <LoginPage notice={notice ?? meError} />;
+
+  return <ProfilePage me={me} onLoggedOut={loggedOut} />;
 }

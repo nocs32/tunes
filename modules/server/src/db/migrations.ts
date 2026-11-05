@@ -27,4 +27,13 @@ export const migrations: readonly string[] = [
 
   CREATE INDEX sessions_user ON sessions(user_id);
   `,
+
+  // 2 · cached Spotify responses, so page reloads don't spend the Development Mode quota (M1)
+  `
+  CREATE TABLE api_cache (
+    key         TEXT PRIMARY KEY,                -- e.g. "taste:<user id>"
+    value       TEXT NOT NULL,                   -- JSON
+    fetched_at  INTEGER NOT NULL                 -- ms since epoch
+  );
+  `,
 ];

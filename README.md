@@ -4,7 +4,7 @@ A personal music recommender on top of Spotify, for one person and up to four fr
 
 Log in with Spotify → Tunes reads your listening taste → Claude suggests music you don't know yet, optionally for a mood ("night drive", "focus, no vocals") → every suggestion is checked on Spotify, so nothing made up gets through → the list goes into a playlist in your Spotify account → thumbs up or down per track shapes the next run.
 
-**Status:** M0 (setup). Login and the taste profile come next.
+**Status:** M1: Spotify login and the taste profile. Suggestions come next.
 
 ## Stack
 
@@ -17,7 +17,7 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 You need Node 24+ and pnpm 11.
 
 1. Create a Spotify app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). Select Web API and add the redirect URI `http://127.0.0.1:5180/api/auth/callback`.
-2. Copy `.env.example` to `.env` and fill in `SPOTIFY_CLIENT_ID`.
+2. Copy `.env.example` to `.env` and fill in `SPOTIFY_CLIENT_ID` and a `TOKEN_KEY` (the file says how to make one).
 3. Run:
 
 ```bash

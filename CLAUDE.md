@@ -27,12 +27,17 @@ Like the sibling projects (Cinemate, the tables): a setup commit (M0), then a br
 - Before calling a change done, run `pnpm lint`, `pnpm typecheck` and `pnpm test`. Don't disable rules without asking.
 
 ## Layout
-- `modules/server`: Hono on Node 24, run straight from TypeScript (imports use `.ts` extensions; only erasable syntax, so no enums or namespaces).
-  - `src/app.ts`: the routes under `/api`, exported as `AppType` for the web's typed client. Routes read dependencies from the context (`c.var.db`).
+- `modules/server`: Hono on Node 24, run straight from TypeScript (imports use `.ts` extensions; only erasable syntax: no enums, namespaces or constructor parameter properties).
+  - `src/app.ts`: the routes under `/api`, exported as `AppType` for the web's typed client. Routes read dependencies from the context (`c.var.db`, `c.var.env`, and `c.var.user` behind `requireUser`). Route handlers must return `c.json(...)` directly (not a `Promise<Response>` helper) or the client loses the response type.
   - `src/index.ts`: starts the server. In production it also serves `modules/web/dist`.
   - `src/env.ts`: settings, checked at start. The server uses `API_PORT` / `API_HOST`, never `PORT`, which tools set for Vite.
+  - `src/errors.ts`: `ReloginNeeded`, `SpotifyError`, `SpotifyBusy` → `{ error, message }` responses the page explains.
+  - `src/auth/`: PKCE login (`routes.ts`), AES-GCM token encryption (`crypto.ts`), sessions (`tunes_session` cookie, 90 days), `requireUser`.
+  - `src/spotify/`: `accounts.ts` (authorize URL, token exchange and refresh, scopes), `client.ts` (`spotifyFetch`: 429 handling), `api.ts` (typed calls), `index.ts` (`accessTokenFor`: refreshes a minute early, one refresh per user at a time; a dead login deletes that user's sessions).
+  - `src/taste/`: `collect.ts` (all Spotify reads, slimmed), `profile.ts` (ranked artists with trend, representative tracks, known sets), `prompt-text.ts` (what Claude reads), `index.ts` (`loadProfile`, cached 6 h in `api_cache`; `GET /api/taste`, `POST /api/taste/refresh`).
   - `src/db/`: `node:sqlite`, migrations in `migrations.ts` (append only; `user_version` counts them).
-  - Tests sit next to the code (`*.test.ts`, vitest).
-- `modules/web`: Vite + React 19 + Tailwind 4 + shadcn/ui (new-york, neutral; follows the system's dark mode). `src/api.ts` is the typed client.
+  - Tests sit next to the code (`*.test.ts`, vitest), named after what they test, never after their folder. `src/testing.ts` has `testApp`, `mockFetch`, `cookiesFrom`.
+- `modules/web`: Vite + React 19 + Tailwind 4 + shadcn/ui (new-york, neutral; follows the system's dark mode). `src/api.ts` is the typed client plus `unwrap` (JSON or an `ApiError` with the server's message). `src/app.tsx` picks the login or profile page; `src/pages/`.
+- **Logging in while testing:** the user signs in to Spotify themselves in the browser pane; never type their credentials. The session cookie then stays in the pane.
 - Ports: web 5180, server 2574, web preview 4180.
-- `.env` at the repo root (git-ignored): `SPOTIFY_CLIENT_ID`, later `ANTHROPIC_API_KEY`. See `.env.example`.
+- `.env` at the repo root (git-ignored): `SPOTIFY_CLIENT_ID`, `TOKEN_KEY` (never change it: it logs everyone out), later `ANTHROPIC_API_KEY`. See `.env.example`.
