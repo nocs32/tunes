@@ -19,10 +19,10 @@ describe('More like this', () => {
     fakeSpotify();
     const claude = fakeClaude(withSeedAgain);
     const { app, cookie } = loggedInApp(claude);
-    const run = (await (await postRun(app, cookie, { discovery: 'mixed', seedTrackId: seedId })).json()) as Run;
+    const run = (await (await postRun(app, cookie, { discovery: 'mixed', seedTrackIds: [seedId] })).json()) as Run;
 
     expect(claude.prompts[0]).toContain('<seed>\nThey asked for more like this song: SEEDER — Seed Song');
-    expect(run.seed?.name).toBe('Seed Song');
+    expect(run.seeds[0]?.name).toBe('Seed Song');
     expect(run.tracks[0]).toMatchObject({ position: 0, kind: 'seed', known: true, track: { id: seedId } });
     expect(run.tracks.filter((item) => item.track.id === seedId)).toHaveLength(1);
     expect(run.dropped).toContainEqual({ artist: 'SEEDER', title: 'Seed Song', reason: 'duplicate' });
@@ -33,10 +33,10 @@ describe('More like this', () => {
     fakeSpotify();
     const claude = fakeClaude(suggestions);
     const { app, cookie } = loggedInApp(claude);
-    const first = (await (await postRun(app, cookie, { discovery: 'close', seedTrackId: seedId })).json()) as Run;
+    const first = (await (await postRun(app, cookie, { discovery: 'close', seedTrackIds: [seedId] })).json()) as Run;
     const reworked = (await (await postRun(app, cookie, { note: 'faster' }, `/api/runs/${first.id}/refine`)).json()) as Run;
 
-    expect(reworked.seed?.id).toBe(seedId);
+    expect(reworked.seeds[0]?.id).toBe(seedId);
     expect(reworked.tracks[0]?.kind).toBe('seed');
     expect(claude.prompts[1]).toContain('<seed>');
     expect(claude.prompts[1]).not.toContain('- SEEDER — Seed Song');
@@ -49,7 +49,7 @@ describe('More like this', () => {
     const response = await app.request('/api/runs', {
       method: 'POST',
       headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discovery: 'mixed', seedTrackId: '../../me' }),
+      body: JSON.stringify({ discovery: 'mixed', seedTrackIds: ['../../me'] }),
     });
 
     expect(response.status).toBe(400);

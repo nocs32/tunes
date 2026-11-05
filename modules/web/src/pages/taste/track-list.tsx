@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react';
 import type { Profile } from '@/api.ts';
 import { artistNames } from '@/format.ts';
-import { MoreLikeButton } from '../more-like.tsx';
+import { CrateButton, MoreLikeButton } from '../song-actions.tsx';
 
 type Track = Profile['tracks'][number];
 
-// A song you play a lot, with "More like this" to build a mix around it.
+// A song you play a lot, with the crate and "More like this" buttons.
 function TrackCard({ track }: { track: Track }): ReactElement {
   return (
     <li className="flex items-center gap-1">
@@ -26,6 +26,7 @@ function TrackCard({ track }: { track: Track }): ReactElement {
           <p className="text-muted-foreground truncate text-xs">{track.album}</p>
         </div>
       </a>
+      <CrateButton trackId={track.id} title={track.name} />
       <MoreLikeButton trackId={track.id} title={track.name} />
     </li>
   );

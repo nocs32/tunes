@@ -35,21 +35,28 @@ export type PromptInput = {
   count: number;
   avoid: { artist: string; title: string }[];
   refine?: { previous: { artist: string; title: string }[]; note: string };
-  seed?: { artist: string; title: string };
+  seeds?: { artist: string; title: string }[];
 };
 
 const songLines = (songs: { artist: string; title: string }[]): string =>
   songs.map((song) => `- ${song.artist} — ${song.title}`).join('\n');
 
-// "More like this": the whole list is built around one song the listener picked.
-const seedText = (seed: { artist: string; title: string }): string =>
-  [
-    `They asked for more like this song: ${seed.artist} — ${seed.title}`,
-    'Build the whole list around it: songs that share its sound, energy and feel. Use the profile to choose among those, not to drift away from the song.',
-    'The app adds this song itself, so leave it out of your list.',
-  ].join('\n');
+// "More like this" / the crate: the whole list is built around songs the listener picked.
+const seedText = (seeds: { artist: string; title: string }[]): string =>
+  seeds.length === 1
+    ? [
+        `They asked for more like this song: ${seeds[0]?.artist} — ${seeds[0]?.title}`,
+        'Build the whole list around it: songs that share its sound, energy and feel. Use the profile to choose among those, not to drift away from the song.',
+        'The app adds this song itself, so leave it out of your list.',
+      ].join('\n')
+    : [
+        'They picked these songs and asked for more like them:',
+        songLines(seeds),
+        'Build the whole list around what these songs share (sound, energy, feel), and cover the range between them rather than following only one. Use the profile to choose among those, not to drift away from these songs.',
+        'The app adds these songs itself, so leave them out of your list.',
+      ].join('\n');
 
-export const userMessage = ({ profileText, discovery, mood, count, avoid, refine, seed }: PromptInput): string => {
+export const userMessage = ({ profileText, discovery, mood, count, avoid, refine, seeds = [] }: PromptInput): string => {
   const parts = [
     `<profile>\n${profileText}\n</profile>`,
     `Discovery level: ${discoveryText[discovery]}`,
@@ -58,7 +65,7 @@ export const userMessage = ({ profileText, discovery, mood, count, avoid, refine
       : 'No specific request this time: suggest from their overall taste.',
   ];
 
-  if (seed) parts.push(`<seed>\n${seedText(seed)}\n</seed>`);
+  if (seeds.length) parts.push(`<seed>\n${seedText(seeds)}\n</seed>`);
 
   if (avoid.length) parts.push(`<avoid reason="suggested to them recently">\n${songLines(avoid)}\n</avoid>`);
 
