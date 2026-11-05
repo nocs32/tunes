@@ -16,10 +16,15 @@ const track = (id: string, artistId: string, name: string): Record<string, unkno
 
 const page = (items: unknown[]): Record<string, unknown> => ({ items, next: null, total: items.length, cursors: null });
 
+// A song to ask "More like this" about (Spotify ids are 22 characters).
+export const seedId = 'Seed000000000000000001';
+
+const seedTrack = track(seedId, 'seeder', 'Seed Song');
+
 // Spotify for one listener who plays KNOWN's song "Old Favourite", and whose search finds
-// "New Song" by NEWBIE and "Old Favourite" by KNOWN.
+// "New Song" by NEWBIE, "Old Favourite" by KNOWN and "Seed Song" by SEEDER.
 export const fakeSpotify = (): void => {
-  const searchable = [track('new1', 'newbie', 'New Song'), track('old1', 'known', 'Old Favourite')];
+  const searchable = [track('new1', 'newbie', 'New Song'), track('old1', 'known', 'Old Favourite'), seedTrack];
 
   const routes: Record<string, () => unknown> = {
     '/v1/me/top/artists': () => page([{ ...artist('known'), genres: [], images: [] }]),
@@ -36,6 +41,8 @@ export const fakeSpotify = (): void => {
 
       return json({ tracks: page(searchable.filter((item) => query.includes(String(item.name).toLowerCase()))) });
     }
+
+    if (url.pathname === `/v1/tracks/${seedId}`) return json(seedTrack);
 
     const route = routes[url.pathname];
 

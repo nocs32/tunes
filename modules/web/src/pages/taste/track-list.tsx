@@ -1,17 +1,19 @@
 import type { ReactElement } from 'react';
 import type { Profile } from '@/api.ts';
 import { artistNames } from '@/format.ts';
+import { MoreLikeButton } from '../more-like.tsx';
 
 type Track = Profile['tracks'][number];
 
+// A song you play a lot, with "More like this" to build a mix around it.
 function TrackCard({ track }: { track: Track }): ReactElement {
   return (
-    <li>
+    <li className="flex items-center gap-1">
       <a
         href={`https://open.spotify.com/track/${track.id}`}
         target="_blank"
         rel="noreferrer"
-        className="hover:bg-muted flex items-center gap-3 rounded-md p-2 transition-colors"
+        className="hover:bg-muted flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 transition-colors"
       >
         {track.imageUrl ? (
           <img src={track.imageUrl} alt="" loading="lazy" className="bg-muted size-12 rounded object-cover" />
@@ -24,6 +26,7 @@ function TrackCard({ track }: { track: Track }): ReactElement {
           <p className="text-muted-foreground truncate text-xs">{track.album}</p>
         </div>
       </a>
+      <MoreLikeButton trackId={track.id} title={track.name} />
     </li>
   );
 }

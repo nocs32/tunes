@@ -1,6 +1,6 @@
 import { type ReactElement, useEffect, useState } from 'react';
 import { api, type RunSummary, unwrap } from '@/api.ts';
-import { timeAgo } from '@/format.ts';
+import { mixTitle, timeAgo } from '@/format.ts';
 
 const loadRuns = async (): Promise<RunSummary[]> => (await unwrap(api.runs.$get())).runs;
 
@@ -17,7 +17,7 @@ function MixRow({ item, current, onOpen }: { item: RunSummary; current: boolean;
         aria-current={current}
         className="hover:bg-muted aria-[current=true]:bg-muted flex w-full flex-col items-start rounded-md px-3 py-2 text-left"
       >
-        <span className="font-display line-clamp-1 text-base font-bold break-all">{item.mood || 'Your usual'}</span>
+        <span className="font-display line-clamp-1 text-base font-bold break-all">{mixTitle(item.mood, item.seedTitle)}</span>
         <span className="text-muted-foreground text-sm">
           {item.note ? `Reworked: “${item.note}”. ` : ''}
           {item.songs} songs, {timeAgo(item.createdAt)}

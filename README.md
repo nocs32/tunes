@@ -13,9 +13,8 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 - **Send to Spotify:** your rolling "Tunes" playlist (songs replaced each time), or a new playlist per mix.
 - **Thumbs up or down** on every song. Claude reads them on later runs, and a song you disliked never comes back.
 - **Your taste:** what Tunes knows about your listening, and the exact text Claude reads.
+- **More like this** (✨) on any song, in a mix or among your top tracks: a new mix built around that song, which goes first in the list.
 - **Earlier mixes:** reopen any past mix.
-
-Not built yet: seed songs (pick songs you love as "more like these").
 
 ## Stack
 

@@ -91,4 +91,9 @@ export const migrations: readonly string[] = [
 
   CREATE INDEX feedback_recent ON feedback(user_id, created_at);
   `,
+
+  // 6 · the song a "More like this" run is built around (JSON TrackInfo), or NULL
+  `
+  ALTER TABLE runs ADD COLUMN seed TEXT;
+  `,
 ];

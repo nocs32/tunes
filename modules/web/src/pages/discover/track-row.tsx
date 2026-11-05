@@ -4,6 +4,7 @@ import type { RunTrack } from '@/api.ts';
 import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { artistNames } from '@/format.ts';
+import { MoreLikeButton } from '../more-like.tsx';
 
 type Vote = RunTrack['vote'];
 
@@ -17,7 +18,7 @@ function Cover({ url }: { url: string | null }): ReactElement {
   );
 }
 
-// The row's actions, icons only (names in the tooltip and for screen readers): thumbs up / down,
+// The row's actions, icons only (names in the tooltip and for screen readers): more like this, thumbs up / down,
 // which Claude reads in every later run (pressing the active one takes it back), and ✕ to leave it out.
 function Actions({ item, onRemove, onVote }: TrackRowProps): ReactElement {
   const name = item.track.name;
@@ -42,6 +43,7 @@ function Actions({ item, onRemove, onVote }: TrackRowProps): ReactElement {
 
   return (
     <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+      <MoreLikeButton trackId={item.track.id} title={name} />
       {thumb('up', 'Good pick', ThumbsUp)}
       {thumb('down', 'Not for me', ThumbsDown)}
       <Button
@@ -77,7 +79,8 @@ export function TrackRow({ item, onRemove, onVote }: TrackRowProps): ReactElemen
             >
               {track.name}
             </a>
-            {item.kind === 'wildcard' && <Badge variant="outline">Wildcard</Badge>}
+            {item.kind === 'seed' && <Badge>Your pick</Badge>}
+          {item.kind === 'wildcard' && <Badge variant="outline">Wildcard</Badge>}
             {item.known && <Badge variant="secondary">You know this</Badge>}
           </div>
           <p className="text-muted-foreground truncate text-sm">{artistNames(track.artists)}</p>

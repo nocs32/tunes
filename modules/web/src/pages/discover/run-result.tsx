@@ -3,7 +3,7 @@ import type { PlaylistMode, Run } from '@/api.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Textarea } from '@/components/ui/textarea.tsx';
-import { timeAgo } from '@/format.ts';
+import { mixTitle, timeAgo } from '@/format.ts';
 import { SendPanel } from './send-panel.tsx';
 import { TrackRow } from './track-row.tsx';
 import type { TrackEdits } from './use-runs.ts';
@@ -24,7 +24,7 @@ function TapeLabel({ run }: { run: Run }): ReactElement {
 
   return (
     <header className="bg-primary text-primary-foreground rounded-lg px-5 py-6 sm:px-7 sm:py-8">
-      <h2 className="font-display line-clamp-3 text-3xl leading-tight font-bold break-words sm:text-4xl">{run.mood || 'Your usual'}</h2>
+      <h2 className="font-display line-clamp-3 text-3xl leading-tight font-bold break-words sm:text-4xl">{mixTitle(run.mood, run.seed?.name)}</h2>
       {run.note && <p className="mt-2 text-base font-medium">Reworked: “{run.note}”</p>}
       <p className="mt-3 text-sm opacity-80">
         {kept} songs, {levelWord[run.discovery]}. Made {timeAgo(run.createdAt)}

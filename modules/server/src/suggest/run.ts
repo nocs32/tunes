@@ -1,8 +1,8 @@
 import type { Db } from '../db/index.ts';
 import type { Env } from '../env.ts';
 import { type Vote, votedSets } from '../feedback/index.ts';
-import { libraryContains, spotifyFor } from '../spotify/index.ts';
-import { loadProfile, type Known, type TrackInfo } from '../taste/index.ts';
+import { getTrack, libraryContains, type SpotifyCall, spotifyFor } from '../spotify/index.ts';
+import { loadProfile, type Known, slimTrack, type TasteProfile, type TrackInfo } from '../taste/index.ts';
 import type { Suggestion, SuggestClient } from './claude.ts';
 import { type Discovery, system, userMessage } from './prompt.ts';
 import { type Dropped, recentSuggestions, type Run, type RunTrack, saveRun } from './store.ts';
@@ -14,7 +14,8 @@ import { verifyAll } from './verify.ts';
 export const askCount = 35;
 export const keepCount = 25;
 
-export type RunInput = { mood: string; discovery: Discovery; refineOf?: Run; note?: string };
+// seedTrackId: "More like this" on a song. A rework keeps its parent's seed.
+export type RunInput = { mood: string; discovery: Discovery; refineOf?: Run; note?: string; seedTrackId?: string };
 
 type RunDeps = { db: Db; env: Env; claude: SuggestClient; userId: string };
 
@@ -29,12 +30,14 @@ export const selectTracks = (
   known: Known,
   discovery: Discovery,
   voted: Record<Vote, Set<string>> = { up: new Set(), down: new Set() },
+  seed: TrackInfo | null = null,
 ): Selection => {
   const knownUris = new Set(known.trackUris);
   const knownIsrcs = new Set(known.isrcs);
   const votedOn = (track: TrackInfo, vote: Vote): boolean => voted[vote].has(track.id) || Boolean(track.isrc && voted[vote].has(track.isrc));
   const knownArtists = new Set(known.artistIds);
-  const seen = new Set<string>();
+  // The seed is already in the list (it goes first), so Claude suggesting it again is a repeat.
+  const seen = new Set<string>(seed ? [seed.id, ...(seed.isrc ? [seed.isrc] : [])] : []);
   const selection: Selection = { tracks: [], dropped: [] };
 
   suggestions.forEach((suggestion, index) => {
@@ -75,26 +78,49 @@ const markSaved = async (get: Parameters<typeof libraryContains>[0], tracks: Sel
   });
 };
 
-export const createRun = async ({ db, env, claude, userId }: RunDeps, input: RunInput): Promise<Run> => {
-  const started = Date.now();
-  const get = spotifyFor(db, env, userId);
-  const { profile } = await loadProfile(db, env, userId);
-  const previous = input.refineOf?.tracks.map((item) => ({ artist: item.track.artists[0]?.name ?? '', title: item.track.name }));
+// The song a run is built around, as a slim track, if any.
+const resolveSeed = async (get: SpotifyCall, input: RunInput): Promise<TrackInfo | null> => {
+  if (input.refineOf) return input.refineOf.seed;
+
+  return input.seedTrackId ? slimTrack(await getTrack(get, input.seedTrackId)) : null;
+};
+
+const promptFor = (db: Db, userId: string, profile: TasteProfile, input: RunInput, seed: TrackInfo | null): string => {
+  const previous = input.refineOf?.tracks
+    .filter((item) => item.kind !== 'seed')
+    .map((item) => ({ artist: item.track.artists[0]?.name ?? '', title: item.track.name }));
+
   const refine = previous && input.note ? { previous, note: input.note } : undefined;
 
-  const user = userMessage({
+  return userMessage({
     profileText: profile.promptText,
     discovery: input.discovery,
     mood: input.mood,
     count: askCount,
     avoid: refine ? [] : recentSuggestions(db, userId),
     refine,
+    seed: seed ? { artist: seed.artists.map((artist) => artist.name).join(', '), title: seed.name } : undefined,
   });
+};
 
-  const answer = await claude.ask({ system, user });
+// The seed first, labelled as your pick; Claude's songs after it.
+const withSeed = (tracks: Selection['tracks'], seed: TrackInfo | null): Selection['tracks'] =>
+  seed
+    ? [
+        { position: 0, track: seed, reason: 'The song you asked for more of.', kind: 'seed', known: true },
+        ...tracks.map((item) => ({ ...item, position: item.position + 1 })),
+      ]
+    : tracks;
+
+export const createRun = async ({ db, env, claude, userId }: RunDeps, input: RunInput): Promise<Run> => {
+  const started = Date.now();
+  const get = spotifyFor(db, env, userId);
+  const { profile } = await loadProfile(db, env, userId);
+  const seed = await resolveSeed(get, input);
+  const answer = await claude.ask({ system, user: promptFor(db, userId, profile, input, seed) });
   const wanted = answer.suggestions.map((item) => ({ artist: item.artist, title: item.title, artistAlt: item.artist_alt, titleAlt: item.title_alt }));
   const found = await verifyAll(db, get, wanted);
-  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery, votedSets(db, userId));
+  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery, votedSets(db, userId), seed);
 
   await markSaved(get, selection.tracks);
 
@@ -106,8 +132,9 @@ export const createRun = async ({ db, env, claude, userId }: RunDeps, input: Run
     note: input.note ?? null,
     asked: answer.suggestions.length,
     dropped: selection.dropped,
-    tracks: selection.tracks,
+    tracks: withSeed(selection.tracks, seed),
     usage: answer.usage,
     durationMs: Date.now() - started,
+    seed,
   });
 };
