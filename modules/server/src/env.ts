@@ -21,6 +21,8 @@ const schema = z.object({
   SPOTIFY_CLIENT_ID: z.string().min(1, 'is missing: copy it from the Spotify dashboard'),
   // Encrypts Spotify tokens at rest. Changing it logs everyone out.
   TOKEN_KEY: tokenKey,
+  // Claude, for suggestions. Without it the server runs, but suggestions say the key is missing.
+  ANTHROPIC_API_KEY: z.string().optional(),
   // Where SQLite keeps its file. In Docker this points into the mounted volume.
   DATABASE_PATH: z.string().default(path.join(repoRoot, 'data', 'tunes.db')),
   // The built web page. Served by this process in production; in dev Vite serves it instead.

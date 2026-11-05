@@ -1,14 +1,12 @@
 import type { ReactElement } from 'react';
-import type { Me, Taste } from '@/api.ts';
+import type { Taste } from '@/api.ts';
 import { Alert, AlertDescription } from '@/components/ui/alert.tsx';
 import { Button } from '@/components/ui/button.tsx';
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { Skeleton } from '@/components/ui/skeleton.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
 import { timeAgo } from '@/format.ts';
 import { ArtistList } from './artist-list.tsx';
 import { ClaudeView, RecentList } from './listening-details.tsx';
-import { ProfileHeader } from './profile-header.tsx';
 import { TrackList } from './track-list.tsx';
 import { useTaste } from './use-taste.ts';
 
@@ -16,18 +14,18 @@ function Stats({ taste }: { taste: Taste }): ReactElement {
   const { counts } = taste.profile;
 
   const items = [
-    ['Saved songs', counts.saved],
-    ['Followed artists', counts.followed],
-    ['Songs Tunes knows you know', taste.knownCounts.tracks],
-    ['Artists you know', taste.knownCounts.artists],
+    ['saved songs', counts.saved],
+    ['followed artists', counts.followed],
+    ['songs Tunes knows you know', taste.knownCounts.tracks],
+    ['artists you know', taste.knownCounts.artists],
   ] as const;
 
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
       {items.map(([label, value]) => (
-        <div key={label} className="bg-muted rounded-md p-3">
-          <dt className="text-muted-foreground text-xs">{label}</dt>
-          <dd className="text-lg font-semibold tabular-nums">{value.toLocaleString()}</dd>
+        <div key={label} className="flex flex-col-reverse">
+          <dt className="text-muted-foreground text-sm">{label}</dt>
+          <dd className="text-2xl font-semibold tabular-nums">{value.toLocaleString()}</dd>
         </div>
       ))}
     </dl>
@@ -73,37 +71,32 @@ function Loading(): ReactElement {
   );
 }
 
-type ProfilePageProps = { me: Me; onLoggedOut: (message: string | null) => void };
+type TastePanelProps = { onLoggedOut: (message: string | null) => void };
 
-export function ProfilePage({ me, onLoggedOut }: ProfilePageProps): ReactElement {
+export function TastePanel({ onLoggedOut }: TastePanelProps): ReactElement {
   const { taste, error, refreshing, refresh } = useTaste(onLoggedOut);
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-4 sm:p-6">
-      <ProfileHeader me={me} onLoggedOut={onLoggedOut} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Your taste</CardTitle>
-          <CardDescription>
-            From your Spotify top lists (last 4 weeks, 6 months and 1 year), recent plays, saved songs and followed artists.
-            {taste && ` Updated ${timeAgo(taste.fetchedAt)}.`}
-          </CardDescription>
-          <CardAction>
-            <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing || !taste}>
-              {refreshing ? 'Refreshing…' : 'Refresh'}
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {taste ? <Stats taste={taste} /> : !error && <Loading />}
-          {taste && <TasteTabs taste={taste} />}
-        </CardContent>
-      </Card>
-    </main>
+    <section className="flex flex-col gap-8" aria-label="Your taste">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">What Tunes knows about your listening</h2>
+          <p className="text-muted-foreground max-w-prose text-sm">
+            From your Spotify top lists for the last 4 weeks, 6 months and year, your recent plays, saved songs and followed
+            artists.{taste && ` Updated ${timeAgo(taste.fetchedAt)}.`}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing || !taste}>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {taste ? <Stats taste={taste} /> : !error && <Loading />}
+      {taste && <TasteTabs taste={taste} />}
+    </section>
   );
 }

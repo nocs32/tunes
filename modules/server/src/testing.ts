@@ -1,7 +1,10 @@
 import { vi } from 'vitest';
 import { createApp } from './app.ts';
-import { openDb } from './db/index.ts';
+import { createSession, sessionCookie } from './auth/sessions.ts';
+import { type Db, openDb } from './db/index.ts';
 import type { Env } from './env.ts';
+import type { SuggestClient } from './suggest/claude.ts';
+import { saveLogin } from './users/index.ts';
 
 // Shared helpers for tests. Never imported by the server itself.
 
@@ -11,12 +14,23 @@ export const testEnv: Env = {
   PUBLIC_URL: 'http://127.0.0.1:5180',
   SPOTIFY_CLIENT_ID: 'test-client',
   TOKEN_KEY: Buffer.alloc(32, 7).toString('base64'),
+  ANTHROPIC_API_KEY: undefined,
   DATABASE_PATH: ':memory:',
   WEB_DIST: '',
   NODE_ENV: 'test',
 };
 
-export const testApp = (): ReturnType<typeof createApp> => createApp(openDb(':memory:'), testEnv);
+export const testApp = (claude?: SuggestClient): ReturnType<typeof createApp> => createApp(openDb(':memory:'), testEnv, claude);
+
+// An app with one logged-in user ("anna"); `cookie` goes in the Cookie header.
+export const loggedInApp = (claude?: SuggestClient): { app: ReturnType<typeof createApp>; db: Db; cookie: string } => {
+  const db = openDb(':memory:');
+  const tokens = { accessToken: 'at', refreshToken: 'rt', expiresAt: Date.now() + 3_600_000 };
+
+  saveLogin(db, { id: 'anna', displayName: 'Anna', imageUrl: null, tokens }, testEnv.TOKEN_KEY);
+
+  return { app: createApp(db, testEnv, claude), db, cookie: `${sessionCookie}=${createSession(db, 'anna')}` };
+};
 
 export const json = (body: unknown, status = 200, headers: Record<string, string> = {}): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });

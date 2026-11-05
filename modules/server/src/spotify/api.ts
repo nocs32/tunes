@@ -46,6 +46,18 @@ export const getSavedTracks = async (get: SpotifyGet): Promise<{ items: SpotifyS
   return { items, total };
 };
 
+// Track search: at most 10 results per request (spec §5).
+export const searchTracks = async (get: SpotifyGet, query: string): Promise<SpotifyTrack[]> =>
+  (await get<{ tracks: SpotifyPage<SpotifyTrack> }>(`/search?type=track&limit=10&q=${encodeURIComponent(query)}`)).tracks.items;
+
+// Which of these tracks are saved in the library: at most 40 URIs per request.
+export const libraryContains = async (get: SpotifyGet, uris: string[]): Promise<boolean[]> => {
+  const chunks = Array.from({ length: Math.ceil(uris.length / 40) }, (_, index) => uris.slice(index * 40, index * 40 + 40));
+  const answers = await Promise.all(chunks.map((chunk) => get<boolean[]>(`/me/library/contains?uris=${encodeURIComponent(chunk.join(','))}`)));
+
+  return answers.flat();
+};
+
 type FollowedPage = { artists: SpotifyCursorPage<SpotifyArtist> };
 
 export const getFollowedArtists = async (get: SpotifyGet): Promise<SpotifyArtist[]> => {

@@ -35,6 +35,24 @@ export class SpotifyBusy extends Error {
   }
 }
 
+// Claude declined the request (stop_reason "refusal"). The page shows why and offers Retry (D18).
+export class ClaudeRefused extends Error {
+  readonly category: string | null;
+
+  constructor(category: string | null, explanation: string | null) {
+    super(
+      `Claude declined this run${category ? ` (${category})` : ''}.${explanation ? ` ${explanation}` : ''} You can retry, or change the mood text.`,
+    );
+
+    this.category = category;
+  }
+}
+
+export class NotFound extends Error {}
+
+// Claude couldn't answer usefully: no API key, an API error, or an unusable answer.
+export class ClaudeFailed extends Error {}
+
 type ErrorBody = { error: string; message: string };
 
 const describe = (error: Error): [ContentfulStatusCode, ErrorBody] => {
@@ -49,6 +67,12 @@ const describe = (error: Error): [ContentfulStatusCode, ErrorBody] => {
   }
 
   if (error instanceof SpotifyError) return [502, { error: 'spotify', message: error.message }];
+
+  if (error instanceof ClaudeRefused) return [422, { error: 'claude_refused', message: error.message }];
+
+  if (error instanceof ClaudeFailed) return [502, { error: 'claude', message: error.message }];
+
+  if (error instanceof NotFound) return [404, { error: 'not_found', message: error.message }];
 
   return [500, { error: 'server', message: 'Something went wrong on the server.' }];
 };

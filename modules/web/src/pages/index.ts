@@ -1,2 +1,2 @@
 export { LoginPage } from './login-page.tsx';
-export { ProfilePage } from './profile/index.tsx';
+export { MainPage } from './main-page.tsx';
