@@ -7,7 +7,8 @@ export type RunTrack = {
   position: number;
   track: TrackInfo;
   reason: string;
-  kind: 'close' | 'wildcard';
+  // seed: the song a "More like this" run was built around, always first.
+  kind: 'close' | 'wildcard' | 'seed';
   known: boolean;
   removed: boolean;
   vote: Vote | null;
@@ -31,6 +32,7 @@ export type Run = {
   usage: { input: number; output: number } | null;
   durationMs: number | null;
   playlist: SentTo | null;
+  seed: TrackInfo | null;
 };
 
 // Where the run's songs went in Spotify, and when.
@@ -51,9 +53,10 @@ type RunRow = {
   playlist_id: string | null;
   playlist_name: string | null;
   sent_at: number | null;
+  seed: string | null;
 };
 
-type TrackRow = { position: number; track: string; reason: string; kind: 'close' | 'wildcard'; known: number; removed: number };
+type TrackRow = { position: number; track: string; reason: string; kind: RunTrack['kind']; known: number; removed: number };
 
 const tracksOf = (db: Db, userId: string, runId: number): RunTrack[] => {
   const votes = votesByTrack(db, userId);
@@ -86,6 +89,7 @@ const fromRow = (db: Db, userId: string, row: RunRow): Run => ({
   usage: row.input_tokens === null ? null : { input: row.input_tokens, output: row.output_tokens ?? 0 },
   durationMs: row.duration_ms,
   playlist: row.playlist_id ? { id: row.playlist_id, name: row.playlist_name ?? '', sentAt: row.sent_at ?? 0 } : null,
+  seed: row.seed ? (JSON.parse(row.seed) as TrackInfo) : null,
 });
 
 // Only the owner's runs: another user's id reads as "not found".
@@ -102,9 +106,12 @@ export const latestRun = (db: Db, userId: string): Run | undefined => {
 };
 
 // Earlier runs, newest first, as a short list (the page opens one with getRun).
-export type RunSummary = Pick<Run, 'id' | 'createdAt' | 'mood' | 'discovery' | 'note' | 'playlist'> & { songs: number };
+export type RunSummary = Pick<Run, 'id' | 'createdAt' | 'mood' | 'discovery' | 'note' | 'playlist'> & {
+  songs: number;
+  seedTitle: string | null;
+};
 
-type SummaryRow = Pick<RunRow, 'id' | 'created_at' | 'mood' | 'discovery' | 'note' | 'playlist_id' | 'playlist_name' | 'sent_at'> & {
+type SummaryRow = Pick<RunRow, 'id' | 'created_at' | 'mood' | 'discovery' | 'note' | 'playlist_id' | 'playlist_name' | 'sent_at' | 'seed'> & {
   songs: number;
 };
 
@@ -123,6 +130,7 @@ export const listRuns = (db: Db, userId: string, limit = 30): RunSummary[] =>
     discovery: row.discovery,
     note: row.note,
     songs: row.songs,
+    seedTitle: row.seed ? (JSON.parse(row.seed) as TrackInfo).name : null,
     playlist: row.playlist_id ? { id: row.playlist_id, name: row.playlist_name ?? '', sentAt: row.sent_at ?? 0 } : null,
   }));
 
@@ -146,11 +154,11 @@ export type NewRun = Omit<Run, 'id' | 'playlist' | 'tracks'> & { tracks: Omit<Ru
 export const saveRun = (db: Db, userId: string, run: NewRun): Run => {
   const result = db
     .prepare(
-      `INSERT INTO runs (user_id, created_at, mood, discovery, refined_from, note, asked, dropped, input_tokens, output_tokens, duration_ms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO runs (user_id, created_at, mood, discovery, refined_from, note, asked, dropped, input_tokens, output_tokens, duration_ms, seed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(userId, run.createdAt, run.mood, run.discovery, run.refinedFrom, run.note, run.asked, JSON.stringify(run.dropped),
-      run.usage?.input ?? null, run.usage?.output ?? null, run.durationMs);
+      run.usage?.input ?? null, run.usage?.output ?? null, run.durationMs, run.seed ? JSON.stringify(run.seed) : null);
 
   const id = Number(result.lastInsertRowid);
   const insert = db.prepare('INSERT INTO run_tracks (run_id, position, track, reason, kind, known, removed) VALUES (?, ?, ?, ?, ?, ?, 0)');

@@ -10,7 +10,8 @@ export type RunsState = {
   run: Run | null;
   busy: Busy;
   error: RunError | null;
-  start: (mood: string, discovery: Discovery) => void;
+  start: (mood: string, discovery: Discovery, seedTrackId?: string) => void;
+  moreLike: (trackId: string) => void;
   refine: (note: string) => void;
   open: (runId: number) => void;
 } & TrackEdits;
@@ -105,8 +106,11 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
       .catch(() => undefined);
   }, []);
 
-  const start = (mood: string, discovery: Discovery): void =>
-    go('new', () => waitForRun(unwrap(api.runs.$post({ json: { mood, discovery } }))));
+  const start = (mood: string, discovery: Discovery, seedTrackId?: string): void =>
+    go('new', () => waitForRun(unwrap(api.runs.$post({ json: { mood, discovery, seedTrackId } }))));
+
+  // A new mix around one song, at the shown mix's discovery level.
+  const moreLike = (trackId: string): void => start('', run?.discovery ?? 'mixed', trackId);
 
   const refine = (note: string): void => {
     if (run) go('refine', () => waitForRun(unwrap(api.runs[':id'].refine.$post({ param: { id: String(run.id) }, json: { note } }))));
@@ -118,5 +122,5 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
       .catch(() => undefined);
   };
 
-  return { run, busy, error, start, refine, open, ...useTrackEdits(run, setRun) };
+  return { run, busy, error, start, moreLike, refine, open, ...useTrackEdits(run, setRun) };
 };

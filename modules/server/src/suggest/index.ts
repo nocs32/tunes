@@ -16,7 +16,7 @@ export type { Discovery } from './prompt.ts';
 export type { Run, RunTrack } from './store.ts';
 
 // /api/runs — suggestion runs.
-//   POST /                         { mood, discovery } → { jobId }: a new run, started in the background
+//   POST /                         { mood, discovery, seedTrackId? } → { jobId }: a new run, started in the background
 //   POST /:id/refine               { note } → { jobId }: a new run that follows the note
 //   GET  /jobs/:jobId              → { status: running | done (with run) | failed (with error) }
 //   GET  /                         → { runs }: earlier runs, newest first
@@ -29,6 +29,8 @@ export type { Run, RunTrack } from './store.ts';
 const runBody = z.object({
   mood: z.string().trim().max(300).default(''),
   discovery: z.enum(discoveryLevels),
+  // "More like this": a Spotify track id (22 letters and digits).
+  seedTrackId: z.string().regex(/^[A-Za-z0-9]{22}$/).optional(),
 });
 
 const refineBody = z.object({ note: z.string().trim().min(1).max(300) });

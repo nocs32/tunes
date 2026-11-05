@@ -46,6 +46,9 @@ export const getSavedTracks = async (get: SpotifyCall): Promise<{ items: Spotify
   return { items, total };
 };
 
+// One track by id (the single-track endpoint is still available; batch ?ids= lookups are gone).
+export const getTrack = (get: SpotifyCall, id: string): Promise<SpotifyTrack> => get<SpotifyTrack>(`/tracks/${encodeURIComponent(id)}`);
+
 // Track search: at most 10 results per request (spec §5).
 export const searchTracks = async (get: SpotifyCall, query: string): Promise<SpotifyTrack[]> =>
   (await get<{ tracks: SpotifyPage<SpotifyTrack> }>(`/search?type=track&limit=10&q=${encodeURIComponent(query)}`)).tracks.items;

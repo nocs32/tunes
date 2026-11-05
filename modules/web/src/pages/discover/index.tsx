@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { EarlierMixes } from './earlier-mixes.tsx';
 import { RunForm } from './run-form.tsx';
 import { RunResult } from './run-result.tsx';
-import { type RunError, useRuns } from './use-runs.ts';
+import type { RunError, RunsState } from './use-runs.ts';
 
 // A run takes a minute or two: Claude thinks, then every song is looked up on Spotify.
 function Working({ refining }: { refining: boolean }): ReactElement {
@@ -42,10 +42,10 @@ function Failed({ error }: { error: RunError }): ReactElement {
   );
 }
 
-type DiscoverPanelProps = { playlistMode: PlaylistMode; onLoggedOut: (message: string | null) => void };
+type DiscoverPanelProps = { playlistMode: PlaylistMode; runs: RunsState };
 
-export function DiscoverPanel({ playlistMode, onLoggedOut }: DiscoverPanelProps): ReactElement {
-  const { run, busy, error, start, refine, open, setRemoved, setVote, setSent } = useRuns(onLoggedOut);
+export function DiscoverPanel({ playlistMode, runs }: DiscoverPanelProps): ReactElement {
+  const { run, busy, error, start, refine, open, setRemoved, setVote, setSent } = runs;
 
   const openRun = (runId: number): void => {
     open(runId);
