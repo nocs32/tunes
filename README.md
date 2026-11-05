@@ -37,3 +37,14 @@ pnpm test
 pnpm build       # builds the web page into modules/web/dist
 pnpm start       # the server alone; with NODE_ENV=production it also serves the built page
 ```
+
+## On the Pi (tables-host)
+
+Tunes runs on the Raspberry Pi next to the table games, through [tables-host](https://github.com/nocs32/tables-host): a `tunes` service built from this repo's `Dockerfile`, Caddy serving the page at **https://tunes.timnox.dev** and sending `/api` to the container, and the shared Cloudflare Tunnel. It's reached by its address only, not listed on the games' library page.
+
+- **Settings:** `~/tables-host/secrets/tunes.env` on the Pi (never in a repo):
+  `PUBLIC_URL=https://tunes.timnox.dev`, `SPOTIFY_CLIENT_ID`, `ANTHROPIC_API_KEY`, and the Pi's own `TOKEN_KEY` (made once on the Pi; changing it logs everyone out).
+- **Data:** the `tunes-data` volume (`/data/tunes.db`). `docker compose down -v` would delete it.
+- **Update** after merging to `main`: `ssh pi 'cd ~/tables-host && ./deploy.sh tunes'`.
+- **Spotify:** `https://tunes.timnox.dev/api/auth/callback` must be a redirect URI in the Spotify dashboard, and each friend must be added there (name + Spotify email) before they can use it. Development Mode allows 5 people.
+- **Long runs:** a run takes 1–2 minutes, more than Cloudflare's 100-second limit for one request, so the page starts it as a job and checks back every few seconds.
