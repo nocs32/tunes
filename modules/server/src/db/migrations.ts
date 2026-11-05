@@ -67,4 +67,11 @@ export const migrations: readonly string[] = [
     PRIMARY KEY (run_id, position)
   );
   `,
+
+  // 4 · which playlist a run was sent to (M3)
+  `
+  ALTER TABLE runs ADD COLUMN playlist_id TEXT;
+  ALTER TABLE runs ADD COLUMN playlist_name TEXT;
+  ALTER TABLE runs ADD COLUMN sent_at INTEGER;
+  `,
 ];

@@ -23,7 +23,7 @@ export function MainPage({ me, onLoggedOut }: MainPageProps): ReactElement {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="discover" forceMount className="data-[state=inactive]:hidden">
-          <DiscoverPanel onLoggedOut={onLoggedOut} />
+          <DiscoverPanel playlistMode={me.playlistMode} onLoggedOut={onLoggedOut} />
         </TabsContent>
         <TabsContent value="taste" forceMount className="data-[state=inactive]:hidden">
           <TastePanel onLoggedOut={onLoggedOut} />

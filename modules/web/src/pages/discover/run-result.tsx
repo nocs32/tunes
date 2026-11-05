@@ -1,9 +1,10 @@
 import { type ReactElement, useState } from 'react';
-import type { Run } from '@/api.ts';
+import type { PlaylistMode, Run } from '@/api.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Textarea } from '@/components/ui/textarea.tsx';
 import { timeAgo } from '@/format.ts';
+import { SendPanel } from './send-panel.tsx';
 import { TrackRow } from './track-row.tsx';
 
 const dropLabel: Record<Run['dropped'][number]['reason'], string> = {
@@ -82,12 +83,20 @@ function RefineBox({ busy, onRefine }: { busy: boolean; onRefine: (note: string)
   );
 }
 
-type RunResultProps = { run: Run; busy: boolean; onRefine: (note: string) => void; onRemove: (position: number, removed: boolean) => void };
+type RunResultProps = {
+  run: Run;
+  busy: boolean;
+  playlistMode: PlaylistMode;
+  onRefine: (note: string) => void;
+  onRemove: (position: number, removed: boolean) => void;
+  onSent: (playlist: NonNullable<Run['playlist']>) => void;
+};
 
-export function RunResult({ run, busy, onRefine, onRemove }: RunResultProps): ReactElement {
+export function RunResult({ run, busy, playlistMode, onRefine, onRemove, onSent }: RunResultProps): ReactElement {
   return (
     <section className="flex flex-col gap-6" aria-label="Suggestions">
       <TapeLabel run={run} />
+      <SendPanel key={run.id} run={run} initialMode={playlistMode} onSent={onSent} />
       <ol className="divide-border divide-y">
         {run.tracks.map((item) => (
           <TrackRow key={item.position} item={item} onRemove={(removed) => onRemove(item.position, removed)} />

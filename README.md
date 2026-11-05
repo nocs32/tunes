@@ -4,7 +4,7 @@ A personal music recommender on top of Spotify, for one person and up to four fr
 
 Log in with Spotify → Tunes reads your listening taste → Claude suggests music you don't know yet, optionally for a mood ("night drive", "focus, no vocals") → every suggestion is checked on Spotify, so nothing made up gets through → the list goes into a playlist in your Spotify account → thumbs up or down per track shapes the next run.
 
-**Status:** M2: suggestions with a mood, a discovery slider and a refine box. Sending them to a playlist comes next.
+**Status:** M3: suggestions go into a Spotify playlist (a rolling "Tunes" playlist, or a new one per mix). Thumbs up and down come next.
 
 ## Stack
 

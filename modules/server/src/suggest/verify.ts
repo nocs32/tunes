@@ -1,6 +1,6 @@
 import { cached } from '../cache/index.ts';
 import type { Db } from '../db/index.ts';
-import { searchTracks, type SpotifyGet } from '../spotify/index.ts';
+import { searchTracks, type SpotifyCall } from '../spotify/index.ts';
 import { slimTrack, type TrackInfo } from '../taste/collect.ts';
 import { normalize, pickMatch, searchQueries, type Wanted } from './match.ts';
 
@@ -10,7 +10,7 @@ import { normalize, pickMatch, searchQueries, type Wanted } from './match.ts';
 const searchMaxAgeMs = 14 * 24 * 60 * 60 * 1000;
 const parallelSearches = 4;
 
-export const findOnSpotify = async (db: Db, get: SpotifyGet, wanted: Wanted): Promise<TrackInfo | null> => {
+export const findOnSpotify = async (db: Db, get: SpotifyCall, wanted: Wanted): Promise<TrackInfo | null> => {
   const { value } = await cached<TrackInfo | null>(db, {
     // v2: matching learned other spellings (romanized names); older misses are not trusted.
     key: `search2:${normalize(wanted.artist)}|${normalize(wanted.title)}`,
@@ -48,5 +48,5 @@ export const mapLimit = async <T, R>(items: T[], limit: number, run: (item: T) =
   return results;
 };
 
-export const verifyAll = (db: Db, get: SpotifyGet, wanted: Wanted[]): Promise<(TrackInfo | null)[]> =>
+export const verifyAll = (db: Db, get: SpotifyCall, wanted: Wanted[]): Promise<(TrackInfo | null)[]> =>
   mapLimit(wanted, parallelSearches, (item) => findOnSpotify(db, get, item));

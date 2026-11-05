@@ -50,6 +50,9 @@ export class ClaudeRefused extends Error {
 
 export class NotFound extends Error {}
 
+// Something the person can fix, explained in the message.
+export class BadRequest extends Error {}
+
 // Claude couldn't answer usefully: no API key, an API error, or an unusable answer.
 export class ClaudeFailed extends Error {}
 
@@ -73,6 +76,8 @@ const describe = (error: Error): [ContentfulStatusCode, ErrorBody] => {
   if (error instanceof ClaudeFailed) return [502, { error: 'claude', message: error.message }];
 
   if (error instanceof NotFound) return [404, { error: 'not_found', message: error.message }];
+
+  if (error instanceof BadRequest) return [400, { error: 'bad_request', message: error.message }];
 
   return [500, { error: 'server', message: 'Something went wrong on the server.' }];
 };

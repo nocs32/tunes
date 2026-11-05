@@ -5,7 +5,7 @@ import {
   getTopArtists,
   getTopTracks,
   type SpotifyArtist,
-  type SpotifyGet,
+  type SpotifyCall,
   type SpotifyTrack,
   type TimeRange,
   timeRanges,
@@ -70,7 +70,7 @@ const perRange = async <T>(load: (range: TimeRange) => Promise<T>): Promise<Reco
   return { short_term: short as T, medium_term: medium as T, long_term: long as T };
 };
 
-export const collectTaste = async (get: SpotifyGet): Promise<RawTaste> => {
+export const collectTaste = async (get: SpotifyCall): Promise<RawTaste> => {
   const [topArtists, topTracks, recent, saved, followed] = await Promise.all([
     perRange(async (range) => (await getTopArtists(get, range)).map(slimArtist)),
     perRange(async (range) => (await getTopTracks(get, range)).filter(isSpotifyTrack).map(slimTrack)),

@@ -28,7 +28,11 @@ export type Run = {
   tracks: RunTrack[];
   usage: { input: number; output: number } | null;
   durationMs: number | null;
+  playlist: SentTo | null;
 };
+
+// Where the run's songs went in Spotify, and when.
+export type SentTo = { id: string; name: string; sentAt: number };
 
 type RunRow = {
   id: number;
@@ -42,6 +46,9 @@ type RunRow = {
   input_tokens: number | null;
   output_tokens: number | null;
   duration_ms: number | null;
+  playlist_id: string | null;
+  playlist_name: string | null;
+  sent_at: number | null;
 };
 
 type TrackRow = { position: number; track: string; reason: string; kind: 'close' | 'wildcard'; known: number; removed: number };
@@ -68,6 +75,7 @@ const fromRow = (db: Db, row: RunRow): Run => ({
   tracks: tracksOf(db, row.id),
   usage: row.input_tokens === null ? null : { input: row.input_tokens, output: row.output_tokens ?? 0 },
   durationMs: row.duration_ms,
+  playlist: row.playlist_id ? { id: row.playlist_id, name: row.playlist_name ?? '', sentAt: row.sent_at ?? 0 } : null,
 });
 
 // Only the owner's runs: another user's id reads as "not found".
@@ -98,7 +106,7 @@ export const recentSuggestions = (db: Db, userId: string, runs = 3): { artist: s
   });
 };
 
-export const saveRun = (db: Db, userId: string, run: Omit<Run, 'id'>): Run => {
+export const saveRun = (db: Db, userId: string, run: Omit<Run, 'id' | 'playlist'>): Run => {
   const result = db
     .prepare(
       `INSERT INTO runs (user_id, created_at, mood, discovery, refined_from, note, asked, dropped, input_tokens, output_tokens, duration_ms)
@@ -117,4 +125,8 @@ export const saveRun = (db: Db, userId: string, run: Omit<Run, 'id'>): Run => {
 
 export const setRemoved = (db: Db, runId: number, position: number, removed: boolean): void => {
   db.prepare('UPDATE run_tracks SET removed = ? WHERE run_id = ? AND position = ?').run(removed ? 1 : 0, runId, position);
+};
+
+export const markSent = (db: Db, runId: number, sent: SentTo): void => {
+  db.prepare('UPDATE runs SET playlist_id = ?, playlist_name = ?, sent_at = ? WHERE id = ?').run(sent.id, sent.name, sent.sentAt, runId);
 };

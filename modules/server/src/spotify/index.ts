@@ -5,7 +5,7 @@ import type { Env } from '../env.ts';
 import { ReloginNeeded } from '../errors.ts';
 import { getUser, saveTokens, type User } from '../users/index.ts';
 import { refreshTokens } from './accounts.ts';
-import type { SpotifyGet } from './api.ts';
+import type { SpotifyCall } from './api.ts';
 import { spotifyFetch } from './client.ts';
 
 export * from './accounts.ts';
@@ -47,7 +47,7 @@ export const accessTokenFor = async (db: Db, env: Env, userId: string): Promise<
   return pending;
 };
 
-// A GET helper for one user: fresh token, rate limits handled.
-export const spotifyGetFor = (db: Db, env: Env, userId: string): SpotifyGet => {
-  return async <T>(path: string): Promise<T> => spotifyFetch<T>(await accessTokenFor(db, env, userId), path);
+// Spotify calls for one user: fresh token, rate limits handled.
+export const spotifyFor = (db: Db, env: Env, userId: string): SpotifyCall => {
+  return async <T>(path: string, init?: RequestInit): Promise<T> => spotifyFetch<T>(await accessTokenFor(db, env, userId), path, init);
 };

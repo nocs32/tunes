@@ -10,9 +10,9 @@ import { tasteRoutes } from './taste/index.ts';
 export type { AppEnv, UserEnv } from './context.ts';
 
 const meRoutes = new Hono().use(requireUser).get('/', (c) => {
-  const { id, displayName, imageUrl } = c.var.user;
+  const { id, displayName, imageUrl, settings } = c.var.user;
 
-  return c.json({ id, displayName, imageUrl });
+  return c.json({ id, displayName, imageUrl, playlistMode: settings.playlistMode });
 });
 
 // The API lives under /api. The web page calls it through Hono's typed client (`AppType`),

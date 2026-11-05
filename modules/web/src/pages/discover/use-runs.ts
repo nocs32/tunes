@@ -13,6 +13,7 @@ export type RunsState = {
   start: (mood: string, discovery: Discovery) => void;
   refine: (note: string) => void;
   setRemoved: (position: number, removed: boolean) => void;
+  setSent: (playlist: NonNullable<Run['playlist']>) => void;
 };
 
 type Requests = { busy: Busy; error: RunError | null; go: (kind: 'new' | 'refine', request: () => Promise<Run>) => void };
@@ -71,5 +72,9 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
     api.runs[':id'].tracks[':position'].$put({ param: { id: String(run.id), position: String(position) }, json: { removed } });
   };
 
-  return { run, busy, error, start, refine, setRemoved };
+  const setSent = (playlist: NonNullable<Run['playlist']>): void => {
+    if (run) setRun({ ...run, playlist });
+  };
+
+  return { run, busy, error, start, refine, setRemoved, setSent };
 };
