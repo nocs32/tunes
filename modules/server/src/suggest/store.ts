@@ -15,7 +15,7 @@ export type RunTrack = {
 };
 
 // Why a suggestion isn't in the list.
-export type DropReason = 'not_found' | 'duplicate' | 'known_artist' | 'disliked';
+export type DropReason = 'not_found' | 'russian' | 'duplicate' | 'known_artist' | 'disliked';
 
 export type Dropped = { artist: string; title: string; reason: DropReason };
 
