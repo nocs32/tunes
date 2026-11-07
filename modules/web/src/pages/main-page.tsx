@@ -8,12 +8,13 @@ import { ProfileHeader } from './profile-header.tsx';
 import { type SongActions, songActionsContext } from './song-actions.tsx';
 import { TastePanel } from './taste/index.tsx';
 import { crateLimit, useCrate } from './use-crate.ts';
+import { type HistoryState, useHistory } from './use-history.ts';
 
 type MainPageProps = { me: Me; onLoggedOut: (message: string | null) => void };
 
-type MainTabsProps = MainPageProps & { tab: string; onTab: (tab: string) => void; runs: RunsState };
+type MainTabsProps = MainPageProps & { tab: string; onTab: (tab: string) => void; runs: RunsState; history: HistoryState };
 
-function MainTabs({ tab, onTab, me, runs, onLoggedOut }: MainTabsProps): ReactElement {
+function MainTabs({ tab, onTab, me, runs, history, onLoggedOut }: MainTabsProps): ReactElement {
   return (
     <Tabs value={tab} onValueChange={onTab} className="gap-8">
       <TabsList variant="line" className="border-border w-full justify-start border-b pb-1">
@@ -25,10 +26,10 @@ function MainTabs({ tab, onTab, me, runs, onLoggedOut }: MainTabsProps): ReactEl
         </TabsTrigger>
       </TabsList>
       <TabsContent value="discover" forceMount className="data-[state=inactive]:hidden">
-        <DiscoverPanel playlistMode={me.playlistMode} runs={runs} />
+        <DiscoverPanel playlistMode={me.playlistMode} runs={runs} hasHistory={history.summary !== null} />
       </TabsContent>
       <TabsContent value="taste" forceMount className="data-[state=inactive]:hidden">
-        <TastePanel onLoggedOut={onLoggedOut} />
+        <TastePanel onLoggedOut={onLoggedOut} history={history} />
       </TabsContent>
     </Tabs>
   );
@@ -40,6 +41,7 @@ function MainTabs({ tab, onTab, me, runs, onLoggedOut }: MainTabsProps): ReactEl
 export function MainPage({ me, onLoggedOut }: MainPageProps): ReactElement {
   const runs = useRuns(onLoggedOut);
   const crate = useCrate();
+  const history = useHistory();
   const [tab, setTab] = useState('discover');
   const busy = runs.busy !== null;
 
@@ -61,7 +63,7 @@ export function MainPage({ me, onLoggedOut }: MainPageProps): ReactElement {
     <main className={`mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6 sm:py-8 ${crate.tracks.length ? 'pb-48 sm:pb-48' : ''}`}>
       <ProfileHeader me={me} onLoggedOut={onLoggedOut} />
       <songActionsContext.Provider value={actions}>
-        <MainTabs tab={tab} onTab={setTab} me={me} runs={runs} onLoggedOut={onLoggedOut} />
+        <MainTabs tab={tab} onTab={setTab} me={me} runs={runs} history={history} onLoggedOut={onLoggedOut} />
         <CrateBox crate={crate} busy={busy} onFind={() => startFrom(crate.tracks.map((track) => track.id))} />
       </songActionsContext.Provider>
     </main>

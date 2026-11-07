@@ -6,6 +6,7 @@ export type TasteState = {
   error: string | null;
   refreshing: boolean;
   refresh: () => void;
+  reload: () => void;
 };
 
 // Loads the profile (cached on the server for a few hours); `refresh` asks Spotify again.
@@ -37,5 +38,8 @@ export const useTaste = (onLoggedOut: (message: string | null) => void): TasteSt
     run(() => unwrap(api.taste.refresh.$post()));
   }, [run]);
 
-  return { taste, error, refreshing, refresh };
+  // After a history import: what Claude sees changed, Spotify's data didn't.
+  const reload = useCallback(() => run(() => unwrap(api.taste.$get())), [run]);
+
+  return { taste, error, refreshing, refresh, reload };
 };

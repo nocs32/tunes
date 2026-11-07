@@ -7,7 +7,7 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 **Live at https://tunes.timnox.dev** on a Raspberry Pi (see [On the Pi](#on-the-pi-tables-host)). Only Spotify accounts added to the app's user list can log in.
 
 **What it does now:**
-- **Discover:** an optional mood ("night drive", "focus, no vocals") and a slider from close to adventurous. Claude suggests about 25 songs with a one-line reason each.
+- **Discover:** an optional mood ("night drive", "focus, no vocals") and a slider from close to Discover (genuinely new: artists you've never played, one song each). Claude suggests about 25 songs with a one-line reason each.
 - **Checked against Spotify:** every song is looked up before you see it, so nothing made up gets through. Songs you already know are marked, not hidden.
 - **Rework and trim:** "rework the list" with a note, and ✕ to leave songs out.
 - **Send to Spotify:** your rolling "Tunes 11/07/2026" playlist (songs and date replaced each time), or a new playlist per mix.
@@ -17,6 +17,7 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 - **More like this** (✨) on any song, in a mix or among your top tracks: a new mix built around that song, which goes first in the list.
 - **The crate** (+ on any song): collect up to 10 songs you liked, then **Find more like these** in the floating crate box for a mix built around all of them. The crate stays until you clear it.
 - **Earlier mixes:** reopen any past mix.
+- **Your full history:** import Spotify's "Extended streaming history" zip on *Your taste*. Your browser reads it and sends only per-song totals (plays, skips, first and last play); IP addresses, devices and countries never leave it. Then Claude weighs your last 12 months far above older years, songs you keep skipping count like a thumbs down, Discover skips every artist you've ever played, and **Rediscover old favourites** has Claude pick 25 songs you loved but haven't played in a year.
 
 ## Stack
 

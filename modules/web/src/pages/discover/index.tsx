@@ -8,7 +8,9 @@ import { RunResult } from './run-result.tsx';
 import type { RunError, RunsState } from './use-runs.ts';
 
 // A run takes a minute or two: Claude thinks, then every song is looked up on Spotify.
-function Working({ refining }: { refining: boolean }): ReactElement {
+const workingTitle = { new: 'Claude is picking songs', refine: 'Claude is reworking the list', rediscover: 'Claude is picking old favourites' } as const;
+
+function Working({ busy }: { busy: keyof typeof workingTitle }): ReactElement {
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ function Working({ refining }: { refining: boolean }): ReactElement {
 
   return (
     <Alert role="status">
-      <AlertTitle>{refining ? 'Claude is reworking the list' : 'Claude is picking songs'}</AlertTitle>
+      <AlertTitle>{workingTitle[busy]}</AlertTitle>
       <AlertDescription>
         Then each one is looked up on Spotify, so nothing made up gets through. This usually takes a minute or two, and
         it’s been <span className="tabular-nums">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>.
@@ -42,10 +44,10 @@ function Failed({ error }: { error: RunError }): ReactElement {
   );
 }
 
-type DiscoverPanelProps = { playlistMode: PlaylistMode; runs: RunsState };
+type DiscoverPanelProps = { playlistMode: PlaylistMode; runs: RunsState; hasHistory: boolean };
 
-export function DiscoverPanel({ playlistMode, runs }: DiscoverPanelProps): ReactElement {
-  const { run, busy, error, start, refine, open, setRemoved, setVote, setSent } = runs;
+export function DiscoverPanel({ playlistMode, runs, hasHistory }: DiscoverPanelProps): ReactElement {
+  const { run, busy, error, start, rediscover, refine, open, setRemoved, setVote, setSent } = runs;
 
   const openRun = (runId: number): void => {
     open(runId);
@@ -54,8 +56,13 @@ export function DiscoverPanel({ playlistMode, runs }: DiscoverPanelProps): React
 
   return (
     <div className="flex flex-col gap-10">
-      <RunForm busy={busy !== null} initialDiscovery={run?.discovery ?? 'mixed'} onStart={start} />
-      {busy && <Working refining={busy === 'refine'} />}
+      <RunForm
+        busy={busy !== null}
+        initialDiscovery={run && run.discovery !== 'rediscover' ? run.discovery : 'mixed'}
+        onStart={start}
+        onRediscover={hasHistory ? rediscover : null}
+      />
+      {busy && <Working busy={busy} />}
       {error && !busy && <Failed error={error} />}
       {run && (
         <RunResult

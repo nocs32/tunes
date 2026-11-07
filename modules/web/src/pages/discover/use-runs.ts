@@ -4,7 +4,7 @@ import { ApiError, api, type Discovery, isLoggedOut, type Run, type RunTrack, un
 // A failed run remembers what was tried, so Retry repeats exactly that (D18).
 export type RunError = { message: string; refused: boolean; retry: () => void };
 
-type Busy = 'new' | 'refine' | null;
+type Busy = 'new' | 'refine' | 'rediscover' | null;
 
 export type RunsState = {
   run: Run | null;
@@ -12,6 +12,7 @@ export type RunsState = {
   error: RunError | null;
   start: (mood: string, discovery: Discovery, seedTrackIds?: string[]) => void;
   moreLike: (trackIds: string[]) => void;
+  rediscover: (mood: string) => void;
   refine: (note: string) => void;
   open: (runId: number) => void;
 } & TrackEdits;
@@ -45,7 +46,7 @@ const useTrackEdits = (run: Run | null, setRun: (run: Run) => void): TrackEdits 
   };
 };
 
-type Requests = { busy: Busy; error: RunError | null; go: (kind: 'new' | 'refine', request: () => Promise<Run>) => void };
+type Requests = { busy: Busy; error: RunError | null; go: (kind: NonNullable<Busy>, request: () => Promise<Run>) => void };
 
 const pollMs = 3000;
 
@@ -71,7 +72,7 @@ const useRunRequests = (setRun: (run: Run) => void, onLoggedOut: (message: strin
   const [error, setError] = useState<RunError | null>(null);
 
   const go = useCallback(
-    (kind: 'new' | 'refine', request: () => Promise<Run>) => {
+    (kind: NonNullable<Busy>, request: () => Promise<Run>) => {
       const attempt = (): void => {
         setBusy(kind);
         setError(null);
@@ -110,7 +111,10 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
     go('new', () => waitForRun(unwrap(api.runs.$post({ json: { mood, discovery, seedTrackIds } }))));
 
   // A new mix around songs you picked (one with ✨, or the crate), at the shown mix's discovery level.
-  const moreLike = (trackIds: string[]): void => start('', run?.discovery ?? 'mixed', trackIds);
+  // After a Rediscover list, Mixed.
+  const moreLike = (trackIds: string[]): void => start('', run && run.discovery !== 'rediscover' ? run.discovery : 'mixed', trackIds);
+
+  const rediscover = (mood: string): void => go('rediscover', () => waitForRun(unwrap(api.runs.rediscover.$post({ json: { mood } }))));
 
   const refine = (note: string): void => {
     if (run) go('refine', () => waitForRun(unwrap(api.runs[':id'].refine.$post({ param: { id: String(run.id) }, json: { note } }))));
@@ -122,5 +126,5 @@ export const useRuns = (onLoggedOut: (message: string | null) => void): RunsStat
       .catch(() => undefined);
   };
 
-  return { run, busy, error, start, moreLike, refine, open, ...useTrackEdits(run, setRun) };
+  return { run, busy, error, start, moreLike, rediscover, refine, open, ...useTrackEdits(run, setRun) };
 };

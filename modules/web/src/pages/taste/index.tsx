@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button.tsx';
 import { Skeleton } from '@/components/ui/skeleton.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
 import { timeAgo } from '@/format.ts';
+import type { HistoryState } from '../use-history.ts';
 import { ArtistList } from './artist-list.tsx';
+import { HistorySection } from './history-section.tsx';
 import { ClaudeView, RecentList } from './listening-details.tsx';
 import { TrackList } from './track-list.tsx';
 import { useTaste } from './use-taste.ts';
@@ -71,10 +73,10 @@ function Loading(): ReactElement {
   );
 }
 
-type TastePanelProps = { onLoggedOut: (message: string | null) => void };
+type TastePanelProps = { onLoggedOut: (message: string | null) => void; history: HistoryState };
 
-export function TastePanel({ onLoggedOut }: TastePanelProps): ReactElement {
-  const { taste, error, refreshing, refresh } = useTaste(onLoggedOut);
+export function TastePanel({ onLoggedOut, history }: TastePanelProps): ReactElement {
+  const { taste, error, refreshing, refresh, reload } = useTaste(onLoggedOut);
 
   return (
     <section className="flex flex-col gap-8" aria-label="Your taste">
@@ -97,6 +99,7 @@ export function TastePanel({ onLoggedOut }: TastePanelProps): ReactElement {
       )}
       {taste ? <Stats taste={taste} /> : !error && <Loading />}
       {taste && <TasteTabs taste={taste} />}
+      {history.loaded && <HistorySection history={history} onImported={reload} />}
     </section>
   );
 }
