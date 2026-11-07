@@ -4,6 +4,7 @@ import { type Vote, votedSets } from '../feedback/index.ts';
 import { getCrate } from '../crate/store.ts';
 import { getTrack, libraryContains, type SpotifyCall, spotifyFor } from '../spotify/index.ts';
 import { loadProfile, type Known, slimTrack, type TasteProfile, type TrackInfo } from '../taste/index.ts';
+import { isRussianSong } from './banned.ts';
 import type { Suggestion, SuggestClient } from './claude.ts';
 import { type Discovery, system, userMessage } from './prompt.ts';
 import { type Dropped, recentSuggestions, type Run, type RunTrack, saveRun } from './store.ts';
@@ -22,7 +23,7 @@ type RunDeps = { db: Db; env: Env; claude: SuggestClient; userId: string };
 
 type Selection = { tracks: Omit<RunTrack, 'removed' | 'vote'>[]; dropped: Dropped[] };
 
-// Walks Claude's list in order. Songs Spotify doesn't have, repeats, songs you gave a thumbs down,
+// Walks Claude's list in order. Songs Spotify doesn't have, Russian songs (D25), repeats, songs you gave a thumbs down,
 // and (on Adventurous) songs by artists you already know are dropped with a reason; songs you know
 // (including ones you liked before) are kept and labelled (D14).
 export const selectTracks = (
@@ -49,6 +50,8 @@ export const selectTracks = (
     };
 
     if (!track) return drop('not_found');
+
+    if (isRussianSong(track)) return drop('russian');
 
     if (seen.has(track.id) || (track.isrc && seen.has(track.isrc))) return drop('duplicate');
 

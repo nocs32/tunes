@@ -4,6 +4,7 @@ import { BadRequest } from '../errors.ts';
 import {
   addPlaylistItems,
   createPlaylist,
+  getMyPlaylists,
   libraryContains,
   replacePlaylistItems,
   type SpotifyCall,
@@ -14,8 +15,10 @@ import { markSent, type Run } from '../suggest/store.ts';
 import { getUser, saveSettings, setPlaylistId, type UserSettings } from '../users/index.ts';
 
 // Sending a run to Spotify (D7, D21):
-// - rolling (default): one playlist called "Tunes" whose songs are replaced each time. If the
-//   person deleted it in Spotify, a new one is made.
+// - rolling (default): one playlist called "Tunes 11/07/2026" (the date of the mix in it) whose songs
+//   and name are replaced each time. If the remembered one is gone, Tunes looks for another rolling
+//   playlist of theirs before making a new one (a second copy of Tunes, like the dev server, or a
+//   lost database, would otherwise add a "Tunes" each time).
 // - new: a new playlist per run, named after the mood and the date.
 // Songs left out with ✕ are not sent.
 // Tunes asks for private playlists, but Spotify ignores `public: false` (checked 2026-11-05, all scopes
@@ -26,14 +29,18 @@ export type PlaylistMode = UserSettings['playlistMode'];
 
 export type Sent = { id: string; name: string; url: string; mode: PlaylistMode; count: number; sentAt: number };
 
-export const rollingName = 'Tunes';
+// The date as the user asked for it: 11/07/2026.
+const playlistDate = (ms: number): string => new Date(ms).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 
-const shortDate = (ms: number): string => new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+export const rollingName = (run: Run): string => `Tunes ${playlistDate(run.createdAt)}`;
+
+// "Tunes" (before dates were added) or "Tunes 11/07/2026".
+const isRollingName = (name: string): boolean => /^Tunes( \d{2}\/\d{2}\/\d{4})?$/.test(name);
 
 const titleOf = (run: Run): string => (run.mood.length > 60 ? `${run.mood.slice(0, 57)}…` : run.mood) || 'your usual';
 
 const description = (run: Run): string =>
-  `Picked by Tunes for “${titleOf(run)}”, ${shortDate(run.createdAt)}. Every song was looked up on Spotify.`;
+  `Picked by Tunes for “${titleOf(run)}”, ${playlistDate(run.createdAt)}. Every song was looked up on Spotify.`;
 
 // Is the rolling playlist still in the person's library? (Deleting a playlist in Spotify only unfollows it.)
 const stillThere = async (call: SpotifyCall, playlistId: string): Promise<boolean> => {
@@ -42,15 +49,26 @@ const stillThere = async (call: SpotifyCall, playlistId: string): Promise<boolea
   return saved !== false;
 };
 
-const sendRolling = async (db: Db, call: SpotifyCall, userId: string, run: Run, uris: string[]): Promise<{ id: string; name: string }> => {
-  const details = { name: rollingName, description: description(run) };
-  const existing = getUser(db, userId)?.playlistId;
+// The rolling playlist to reuse: the remembered one if it's still saved, else the person's own
+// playlist with a rolling name (newest first, as Spotify lists them).
+const findRolling = async (call: SpotifyCall, userId: string, remembered: string | null | undefined): Promise<string | null> => {
+  if (remembered && (await stillThere(call, remembered))) return remembered;
 
-  if (existing && (await stillThere(call, existing))) {
+  const found = (await getMyPlaylists(call)).find((playlist) => playlist.owner.id === userId && isRollingName(playlist.name));
+
+  return found?.id ?? null;
+};
+
+const sendRolling = async (db: Db, call: SpotifyCall, userId: string, run: Run, uris: string[]): Promise<{ id: string; name: string }> => {
+  const details = { name: rollingName(run), description: description(run) };
+  const existing = await findRolling(call, userId, getUser(db, userId)?.playlistId);
+
+  if (existing) {
     await updatePlaylistDetails(call, existing, details);
     await replacePlaylistItems(call, existing, uris);
+    setPlaylistId(db, userId, existing);
 
-    return { id: existing, name: rollingName };
+    return { id: existing, name: details.name };
   }
 
   const created = await createPlaylist(call, details);
@@ -62,7 +80,7 @@ const sendRolling = async (db: Db, call: SpotifyCall, userId: string, run: Run, 
 };
 
 const sendNew = async (call: SpotifyCall, run: Run, uris: string[]): Promise<{ id: string; name: string }> => {
-  const details = { name: `Tunes: ${titleOf(run)}, ${shortDate(run.createdAt)}`, description: description(run) };
+  const details = { name: `Tunes: ${titleOf(run)}, ${playlistDate(run.createdAt)}`, description: description(run) };
   const created = await createPlaylist(call, details);
 
   await addPlaylistItems(call, created.id, uris);

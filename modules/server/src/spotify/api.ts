@@ -80,6 +80,22 @@ export const getFollowedArtists = async (get: SpotifyCall): Promise<SpotifyArtis
 // Playlists (spec §5): created with POST /me/playlists; contents live at /playlists/{id}/items.
 export type SpotifyPlaylist = { id: string; name: string; external_urls?: { spotify?: string } };
 
+// The person's playlists (their own and followed ones), 50 per page, capped at 200 so a huge
+// library can't eat the quota.
+export const getMyPlaylists = async (get: SpotifyCall): Promise<(SpotifyPlaylist & { owner: { id: string } })[]> => {
+  const items: (SpotifyPlaylist & { owner: { id: string } })[] = [];
+  let next: string | null = '/me/playlists?limit=50';
+
+  while (next && items.length < 200) {
+    const page: SpotifyPage<SpotifyPlaylist & { owner: { id: string } }> = await get(next);
+
+    items.push(...page.items);
+    next = page.next;
+  }
+
+  return items;
+};
+
 type PlaylistDetails = { name: string; description: string };
 
 const jsonBody = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
