@@ -10,6 +10,7 @@ import type { TrackEdits } from './use-runs.ts';
 
 const dropLabel: Record<Run['dropped'][number]['reason'], string> = {
   not_found: 'not on Spotify',
+  russian: 'a Russian song',
   duplicate: 'a repeat',
   disliked: 'you gave it a thumbs down',
   known_artist: 'an artist you know',

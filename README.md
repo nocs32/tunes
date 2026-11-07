@@ -10,7 +10,8 @@ Log in with Spotify → Tunes reads your listening taste → Claude suggests mus
 - **Discover:** an optional mood ("night drive", "focus, no vocals") and a slider from close to adventurous. Claude suggests about 25 songs with a one-line reason each.
 - **Checked against Spotify:** every song is looked up before you see it, so nothing made up gets through. Songs you already know are marked, not hidden.
 - **Rework and trim:** "rework the list" with a note, and ✕ to leave songs out.
-- **Send to Spotify:** your rolling "Tunes" playlist (songs replaced each time), or a new playlist per mix.
+- **Send to Spotify:** your rolling "Tunes 11/07/2026" playlist (songs and date replaced each time), or a new playlist per mix.
+- **No Russian songs:** Claude is told not to suggest any, and songs whose title or artist is written with Russian-only letters are dropped.
 - **Thumbs up or down** on every song. Claude reads them on later runs, and a song you disliked never comes back.
 - **Your taste:** what Tunes knows about your listening, and the exact text Claude reads.
 - **More like this** (✨) on any song, in a mix or among your top tracks: a new mix built around that song, which goes first in the list.

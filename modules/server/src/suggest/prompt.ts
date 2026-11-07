@@ -20,7 +20,8 @@ Rules the app depends on:
 - Only real, released songs you are confident are on Spotify. Write the primary artist and the song title in their original script (for example 米津玄師, 廻廻奇譚). Name a version (for example "- Sped Up") only when you mean that version.
 - Spotify sometimes shows a romanized or English name instead (Kenshi Yonezu, Kaikai Kitan). When an artist or title has such another common spelling, give it in artist_alt / title_alt; otherwise use null.
 - One song per entry, no albums. At most two songs by the same artist.
-- Never suggest songs listed in the profile or in the avoid list.`;
+- Never suggest songs listed in the profile or in the avoid list.
+- No Russian songs: nothing sung in Russian and nothing by Russian artists, even if the profile has some. Ukrainian songs are welcome.`;
 
 const discoveryText: Record<Discovery, string> = {
   close: 'Close: favour songs they probably haven\'t heard by artists they already play, and very close neighbours of those artists.',
