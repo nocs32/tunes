@@ -1,21 +1,22 @@
 import type { Db } from '../db/index.ts';
 import { type Vote, votesByTrack } from '../feedback/index.ts';
 import type { TrackInfo } from '../taste/collect.ts';
-import type { Discovery } from './prompt.ts';
+import type { RunMode } from './prompt.ts';
 
 export type RunTrack = {
   position: number;
   track: TrackInfo;
   reason: string;
   // seed: a song the run was built around ("More like this", the crate), always first.
-  kind: 'close' | 'wildcard' | 'seed';
+  // old: a Rediscover pick from the person's history.
+  kind: 'close' | 'wildcard' | 'seed' | 'old';
   known: boolean;
   removed: boolean;
   vote: Vote | null;
 };
 
 // Why a suggestion isn't in the list.
-export type DropReason = 'not_found' | 'russian' | 'duplicate' | 'known_artist' | 'disliked';
+export type DropReason = 'not_found' | 'russian' | 'duplicate' | 'known_artist' | 'same_artist' | 'disliked' | 'skipped';
 
 export type Dropped = { artist: string; title: string; reason: DropReason };
 
@@ -23,7 +24,7 @@ export type Run = {
   id: number;
   createdAt: number;
   mood: string;
-  discovery: Discovery;
+  discovery: RunMode;
   refinedFrom: number | null;
   note: string | null;
   asked: number;
@@ -42,7 +43,7 @@ type RunRow = {
   id: number;
   created_at: number;
   mood: string;
-  discovery: Discovery;
+  discovery: RunMode;
   refined_from: number | null;
   note: string | null;
   asked: number;

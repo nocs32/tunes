@@ -1,5 +1,5 @@
 import { json, loggedInApp, mockFetch } from '../testing.ts';
-import type { Suggestion, SuggestClient } from './claude.ts';
+import type { Pick, Suggestion, SuggestClient } from './claude.ts';
 
 // Test-only fakes shared by the run and feedback tests.
 
@@ -54,10 +54,16 @@ export const fakeSpotify = (): void => {
   });
 };
 
-export const fakeClaude = (suggestions: Suggestion[]): SuggestClient & { prompts: string[] } => {
+// `picks` answers Rediscover: numbers from the list Claude was given.
+export const fakeClaude = (suggestions: Suggestion[], picks: Pick[] = []): SuggestClient & { prompts: string[] } => {
   const prompts: string[] = [];
+  const usage = { input: 1000, output: 500 };
 
-  return { prompts, ask: async ({ user }) => (prompts.push(user), { suggestions, usage: { input: 1000, output: 500 } }) };
+  return {
+    prompts,
+    ask: async ({ user }) => (prompts.push(user), { suggestions, usage }),
+    pick: async ({ user }) => (prompts.push(user), { picks, usage }),
+  };
 };
 
 export const suggestions: Suggestion[] = [

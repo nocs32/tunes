@@ -108,4 +108,31 @@ export const migrations: readonly string[] = [
     PRIMARY KEY (user_id, track_id)
   );
   `,
+
+  // 8 · the full streaming history (D24, D26): per-song totals from Spotify's data export, built in
+  //     the browser. Never single plays, IP addresses, devices or countries. Re-importing replaces it.
+  `
+  CREATE TABLE history_tracks (
+    user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    uri       TEXT NOT NULL,                   -- spotify:track:…
+    artist    TEXT NOT NULL,
+    title     TEXT NOT NULL,
+    plays     INTEGER NOT NULL,                -- plays of 30 s or more
+    skips     INTEGER NOT NULL,
+    finishes  INTEGER NOT NULL,                -- played to the end
+    first_at  INTEGER,                         -- first / last play of 30 s or more (ms), NULL if none
+    last_at   INTEGER,
+    months    TEXT NOT NULL,                   -- JSON {"2026-03": 4}: plays of 30 s or more per month (UTC)
+    PRIMARY KEY (user_id, uri)
+  );
+
+  CREATE TABLE history_imports (
+    user_id      TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    imported_at  INTEGER NOT NULL,
+    first_at     INTEGER,
+    last_at      INTEGER,
+    plays        INTEGER NOT NULL,
+    tracks       INTEGER NOT NULL
+  );
+  `,
 ];

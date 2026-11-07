@@ -5,6 +5,7 @@ import type { UserEnv } from '../context.ts';
 import type { Db } from '../db/index.ts';
 import type { Env } from '../env.ts';
 import { feedbackText } from '../feedback/index.ts';
+import { historyText, loadHistory } from '../history/index.ts';
 import { spotifyFor } from '../spotify/index.ts';
 import { collectTaste, type RawTaste } from './collect.ts';
 import { buildProfile, type TasteProfile } from './profile.ts';
@@ -29,12 +30,12 @@ export const loadProfile = async (
   });
 
   const profile = buildProfile(raw.value);
-  const feedback = feedbackText(db, userId);
 
-  // Votes change between runs, so they're added fresh, never cached.
-  return { profile: feedback ? { ...profile, promptText: `${profile.promptText}
+  // The imported history and the votes change between runs, so they're added fresh, never cached.
+  const extra = [historyText(loadHistory(db, userId)), feedbackText(db, userId)].filter(Boolean);
+  const promptText = [profile.promptText, ...extra].join('\n\n');
 
-${feedback}` } : profile, fetchedAt: raw.fetchedAt };
+  return { profile: { ...profile, promptText }, fetchedAt: raw.fetchedAt };
 };
 
 // The profile as the page gets it. The known sets stay on the server (thousands of URIs the

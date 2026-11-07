@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { authRoutes, requireUser } from './auth/index.ts';
 import { crateRoutes } from './crate/index.ts';
+import { historyRoutes } from './history/index.ts';
 import type { AppEnv } from './context.ts';
 import type { Db } from './db/index.ts';
 import type { Env } from './env.ts';
@@ -29,7 +30,8 @@ export const api = new Hono<AppEnv>()
   .route('/me', meRoutes)
   .route('/taste', tasteRoutes)
   .route('/runs', runRoutes)
-  .route('/crate', crateRoutes);
+  .route('/crate', crateRoutes)
+  .route('/history', historyRoutes);
 
 export type AppType = typeof api;
 

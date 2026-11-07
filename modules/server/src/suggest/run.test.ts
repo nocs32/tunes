@@ -48,7 +48,8 @@ describe('POST /api/runs', () => {
 
   it('shows Claude’s refusal as a readable error', async () => {
     fakeSpotify();
-    const refusing: SuggestClient = { ask: async () => Promise.reject(new ClaudeRefused('cyber', 'Not allowed.')) };
+    const refuse = async (): Promise<never> => Promise.reject(new ClaudeRefused('cyber', 'Not allowed.'));
+    const refusing: SuggestClient = { ask: refuse, pick: refuse };
     const { app, cookie } = loggedInApp(refusing);
 
     const response = await postRun(app, cookie, { discovery: 'close' });

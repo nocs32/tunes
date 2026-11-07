@@ -37,7 +37,8 @@ export const rollingName = (run: Run): string => `Tunes ${playlistDate(run.creat
 // "Tunes" (before dates were added) or "Tunes 11/07/2026".
 const isRollingName = (name: string): boolean => /^Tunes( \d{2}\/\d{2}\/\d{4})?$/.test(name);
 
-const titleOf = (run: Run): string => (run.mood.length > 60 ? `${run.mood.slice(0, 57)}…` : run.mood) || 'your usual';
+const titleOf = (run: Run): string =>
+  (run.mood.length > 60 ? `${run.mood.slice(0, 57)}…` : run.mood) || (run.discovery === 'rediscover' ? 'old favourites' : 'your usual');
 
 const description = (run: Run): string =>
   `Picked by Tunes for “${titleOf(run)}”, ${playlistDate(run.createdAt)}. Every song was looked up on Spotify.`;

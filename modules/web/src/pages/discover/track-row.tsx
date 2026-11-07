@@ -82,7 +82,7 @@ export function TrackRow({ item, onRemove, onVote }: TrackRowProps): ReactElemen
             </a>
             {item.kind === 'seed' && <Badge>Your pick</Badge>}
           {item.kind === 'wildcard' && <Badge variant="outline">Wildcard</Badge>}
-            {item.known && item.kind !== 'seed' && <Badge variant="secondary">You know this</Badge>}
+            {item.known && item.kind !== 'seed' && item.kind !== 'old' && <Badge variant="secondary">You know this</Badge>}
           </div>
           <p className="text-muted-foreground truncate text-sm">{artistNames(track.artists)}</p>
           <p className="mt-1.5 max-w-prose text-sm leading-relaxed">{item.reason}</p>

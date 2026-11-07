@@ -11,7 +11,9 @@ export type Run = InferResponseType<(typeof api.runs)[':id']['$get'], 200>;
 export type RunTrack = Run['tracks'][number];
 export type CrateTrack = InferResponseType<typeof api.crate.$get, 200>['tracks'][number];
 export type RunSummary = InferResponseType<typeof api.runs.$get, 200>['runs'][number];
-export type Discovery = Run['discovery'];
+// A run's mode: a slider level, or Rediscover (old favourites, D26).
+export type RunMode = Run['discovery'];
+export type Discovery = Exclude<RunMode, 'rediscover'>;
 export type PlaylistMode = Me['playlistMode'];
 
 // Every server error is `{ error, message }`; `code` says what kind (e.g. "relogin").
@@ -45,3 +47,5 @@ export const unwrap = async <R extends Reply>(request: Promise<R>): Promise<Succ
 
   throw new ApiError(body.error ?? 'server', body.message ?? `Request failed (${response.status}).`);
 };
+
+export type HistorySummary = NonNullable<InferResponseType<typeof api.history.$get, 200>['history']>;

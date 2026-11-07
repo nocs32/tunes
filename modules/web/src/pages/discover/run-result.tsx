@@ -14,9 +14,11 @@ const dropLabel: Record<Run['dropped'][number]['reason'], string> = {
   duplicate: 'a repeat',
   disliked: 'you gave it a thumbs down',
   known_artist: 'an artist you know',
+  same_artist: 'one song per artist',
+  skipped: 'you keep skipping it',
 };
 
-const levelWord: Record<Run['discovery'], string> = { close: 'close', mixed: 'mixed', adventurous: 'adventurous' };
+const levelWord: Record<Run['discovery'], string> = { close: 'close', mixed: 'mixed', adventurous: 'discover', rediscover: 'old favourites' };
 
 // The run as a tape: its title on the label band, in the wide display face. The one loud thing on the page.
 function TapeLabel({ run }: { run: Run }): ReactElement {
@@ -25,7 +27,7 @@ function TapeLabel({ run }: { run: Run }): ReactElement {
 
   return (
     <header className="bg-primary text-primary-foreground rounded-lg px-5 py-6 sm:px-7 sm:py-8">
-      <h2 className="font-display line-clamp-3 text-3xl leading-tight font-bold break-words sm:text-4xl">{mixTitle(run.mood, run.seeds.map((track) => track.name))}</h2>
+      <h2 className="font-display line-clamp-3 text-3xl leading-tight font-bold break-words sm:text-4xl">{mixTitle(run.mood, run.seeds.map((track) => track.name), run.discovery)}</h2>
       {run.note && <p className="mt-2 text-base font-medium">Reworked: “{run.note}”</p>}
       <p className="mt-3 text-sm opacity-80">
         {kept} songs, {levelWord[run.discovery]}. Made {timeAgo(run.createdAt)}

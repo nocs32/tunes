@@ -15,9 +15,11 @@ export const timeAgo = (timestamp: number, now = Date.now()): string => {
   return days === 1 ? 'yesterday' : `${days} days ago`;
 };
 
-// A mix's title: its mood, or the songs it was built around, or "Your usual".
-export const mixTitle = (mood: string, seedTitles: string[]): string => {
+// A mix's title: its mood, or the songs it was built around, or "Old favourites" / "Your usual".
+export const mixTitle = (mood: string, seedTitles: string[], mode?: string): string => {
   if (mood) return mood;
+
+  if (mode === 'rediscover') return 'Old favourites';
 
   const [first, ...others] = seedTitles;
 

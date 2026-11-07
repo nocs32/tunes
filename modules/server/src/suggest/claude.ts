@@ -24,10 +24,23 @@ const answerSchema = z.object({
 
 export type Suggestion = z.infer<typeof answerSchema>['suggestions'][number];
 
-export type ClaudeAnswer = { suggestions: Suggestion[]; usage: { input: number; output: number } };
+// Rediscover (D26): Claude picks from a numbered list of the person's old favourites.
+const pickSchema = z.object({
+  picks: z.array(z.object({ number: z.number().int(), reason: z.string() })),
+});
+
+export type Pick = z.infer<typeof pickSchema>['picks'][number];
+
+type Usage = { input: number; output: number };
+
+export type ClaudeAnswer = { suggestions: Suggestion[]; usage: Usage };
+
+export type PickAnswer = { picks: Pick[]; usage: Usage };
+
+type Prompt = { system: string; user: string };
 
 // Swappable in tests.
-export type SuggestClient = { ask: (prompt: { system: string; user: string }) => Promise<ClaudeAnswer> };
+export type SuggestClient = { ask: (prompt: Prompt) => Promise<ClaudeAnswer>; pick: (prompt: Prompt) => Promise<PickAnswer> };
 
 const describeApiError = (error: unknown): ClaudeFailed => {
   if (error instanceof Anthropic.AuthenticationError) return new ClaudeFailed('Claude rejected the API key (ANTHROPIC_API_KEY).');
@@ -39,39 +52,48 @@ const describeApiError = (error: unknown): ClaudeFailed => {
   return new ClaudeFailed(`Couldn't reach Claude: ${error instanceof Error ? error.message : String(error)}`);
 };
 
+// One structured call: the parsed answer, or ClaudeRefused / ClaudeFailed.
+const callClaude = async <T>(client: Anthropic | undefined, schema: z.ZodType<T>, { system, user }: Prompt): Promise<{ parsed: T; usage: Usage }> => {
+  if (!client) throw new ClaudeFailed('No Claude API key: set ANTHROPIC_API_KEY in .env.');
+
+  const response = await client.messages
+    .parse({
+      model,
+      max_tokens: 16000,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'high', format: zodOutputFormat(schema) },
+      system,
+      messages: [{ role: 'user', content: user }],
+    })
+    .catch((error: unknown) => {
+      throw describeApiError(error);
+    });
+
+  // Check the stop reason before reading anything: a refusal may come with no content.
+  if (response.stop_reason === 'refusal') {
+    throw new ClaudeRefused(response.stop_details?.category ?? null, response.stop_details?.explanation ?? null);
+  }
+
+  if (response.stop_reason === 'max_tokens' || !response.parsed_output) {
+    throw new ClaudeFailed('Claude’s answer was cut off or unreadable. Please retry.');
+  }
+
+  return { parsed: response.parsed_output as T, usage: { input: response.usage.input_tokens, output: response.usage.output_tokens } };
+};
+
 export const createClaude = (apiKey: string | undefined): SuggestClient => {
   const client = apiKey ? new Anthropic({ apiKey }) : undefined;
 
   return {
-    ask: async ({ system, user }) => {
-      if (!client) throw new ClaudeFailed('No Claude API key: set ANTHROPIC_API_KEY in .env.');
+    ask: async (prompt) => {
+      const { parsed, usage } = await callClaude(client, answerSchema, prompt);
 
-      const response = await client.messages
-        .parse({
-          model,
-          max_tokens: 16000,
-          thinking: { type: 'adaptive' },
-          output_config: { effort: 'high', format: zodOutputFormat(answerSchema) },
-          system,
-          messages: [{ role: 'user', content: user }],
-        })
-        .catch((error: unknown) => {
-          throw describeApiError(error);
-        });
+      return { suggestions: parsed.suggestions, usage };
+    },
+    pick: async (prompt) => {
+      const { parsed, usage } = await callClaude(client, pickSchema, prompt);
 
-      // Check the stop reason before reading anything: a refusal may come with no content.
-      if (response.stop_reason === 'refusal') {
-        throw new ClaudeRefused(response.stop_details?.category ?? null, response.stop_details?.explanation ?? null);
-      }
-
-      if (response.stop_reason === 'max_tokens' || !response.parsed_output) {
-        throw new ClaudeFailed('Claude’s answer was cut off or unreadable. Please retry.');
-      }
-
-      return {
-        suggestions: response.parsed_output.suggestions,
-        usage: { input: response.usage.input_tokens, output: response.usage.output_tokens },
-      };
+      return { picks: parsed.picks, usage };
     },
   };
 };

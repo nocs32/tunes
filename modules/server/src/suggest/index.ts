@@ -8,17 +8,19 @@ import { spotifyTrackId } from '../ids.ts';
 import { setVote } from '../feedback/index.ts';
 import { getJob, startJob } from '../jobs/index.ts';
 import { sendRun } from '../playlist/index.ts';
+import { createRediscoverRun } from '../rediscover/index.ts';
 import { discoveryLevels } from './prompt.ts';
 import { createRun } from './run.ts';
 import { getRun, latestRun, listRuns, type Run, setRemoved } from './store.ts';
 
 export * from './claude.ts';
-export type { Discovery } from './prompt.ts';
+export type { Discovery, RunMode } from './prompt.ts';
 export type { Run, RunTrack } from './store.ts';
 
 // /api/runs — suggestion runs.
 //   POST /                         { mood, discovery, seedTrackIds? } → { jobId }: a new run, started in the background
-//   POST /:id/refine               { note } → { jobId }: a new run that follows the note
+//   POST /rediscover               { mood } → { jobId }: old favourites from the imported history (D26)
+//   POST /:id/refine               { note } → { jobId }: a new run that follows the note (Rediscover stays Rediscover)
 //   GET  /jobs/:jobId              → { status: running | done (with run) | failed (with error) }
 //   GET  /                         → { runs }: earlier runs, newest first
 //   GET  /latest                   → { run } or { run: null }
@@ -33,6 +35,8 @@ const runBody = z.object({
   // "More like this" (one song) or "Find more like these" (the crate's songs).
   seedTrackIds: z.array(spotifyTrackId).max(10).optional(),
 });
+
+const rediscoverBody = z.object({ mood: z.string().trim().max(300).default('') });
 
 const refineBody = z.object({ note: z.string().trim().min(1).max(300) });
 
@@ -64,6 +68,11 @@ export const runRoutes = new Hono()
 
     return c.json({ jobId: startJob(c.var.user.id, () => createRun(deps(c), input)) }, 202);
   })
+  .post('/rediscover', zValidator('json', rediscoverBody), (c) => {
+    const { mood } = c.req.valid('json');
+
+    return c.json({ jobId: startJob(c.var.user.id, () => createRediscoverRun(deps(c), { mood })) }, 202);
+  })
   .get('/jobs/:jobId', (c) => {
     const job = getJob<Run>(c.req.param('jobId'), c.var.user.id);
 
@@ -76,9 +85,15 @@ export const runRoutes = new Hono()
   .get('/:id', (c) => c.json(ownRun(c)))
   .post('/:id/refine', zValidator('json', refineBody), (c) => {
     const parent = ownRun(c);
-    const input = { mood: parent.mood, discovery: parent.discovery, refineOf: parent, note: c.req.valid('json').note };
+    const { note } = c.req.valid('json');
+    const { discovery } = parent;
 
-    return c.json({ jobId: startJob(c.var.user.id, () => createRun(deps(c), input)) }, 202);
+    const work = (): Promise<Run> =>
+      discovery === 'rediscover'
+        ? createRediscoverRun(deps(c), { mood: parent.mood, refineOf: parent, note })
+        : createRun(deps(c), { mood: parent.mood, discovery, refineOf: parent, note });
+
+    return c.json({ jobId: startJob(c.var.user.id, work) }, 202);
   })
   .put('/:id/tracks/:position', zValidator('json', removedBody), (c) => {
     const run = ownRun(c);

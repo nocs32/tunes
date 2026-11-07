@@ -4,10 +4,12 @@ import { type Vote, votedSets } from '../feedback/index.ts';
 import { getCrate } from '../crate/store.ts';
 import { getTrack, libraryContains, type SpotifyCall, spotifyFor } from '../spotify/index.ts';
 import { loadProfile, type Known, slimTrack, type TasteProfile, type TrackInfo } from '../taste/index.ts';
+import { type HistoryFilters, historyFilters, loadHistory, noHistory } from '../history/index.ts';
 import { isRussianSong } from './banned.ts';
 import type { Suggestion, SuggestClient } from './claude.ts';
+import { normalize } from './match.ts';
 import { type Discovery, system, userMessage } from './prompt.ts';
-import { type Dropped, recentSuggestions, type Run, type RunTrack, saveRun } from './store.ts';
+import { type DropReason, type Dropped, recentSuggestions, type Run, type RunTrack, saveRun } from './store.ts';
 import { verifyAll } from './verify.ts';
 
 // One suggestion run: profile → Claude → look up every song on Spotify → keep up to 25 → save.
@@ -23,9 +25,46 @@ type RunDeps = { db: Db; env: Env; claude: SuggestClient; userId: string };
 
 type Selection = { tracks: Omit<RunTrack, 'removed' | 'vote'>[]; dropped: Dropped[] };
 
-// Walks Claude's list in order. Songs Spotify doesn't have, Russian songs (D25), repeats, songs you gave a thumbs down,
-// and (on Adventurous) songs by artists you already know are dropped with a reason; songs you know
-// (including ones you liked before) are kept and labelled (D14).
+// What a run's songs are checked against: what you know, your votes, the history, the seeds.
+type Checks = {
+  known: Known;
+  discovery: Discovery;
+  voted: Record<Vote, Set<string>>;
+  history: HistoryFilters;
+};
+
+// Why a found song is dropped, or null to keep it. `seen` holds the songs (ids and ISRCs) and
+// `artists` the artist ids already in the list.
+const dropReason = (track: TrackInfo, checks: Checks, seen: Set<string>, artists: Set<string>): DropReason | null => {
+  const has = (set: Set<string>): boolean => set.has(track.id) || Boolean(track.isrc && set.has(track.isrc));
+  const discover = checks.discovery === 'adventurous';
+
+  if (isRussianSong(track)) return 'russian';
+
+  if (has(seen)) return 'duplicate';
+
+  if (has(checks.voted.down)) return 'disliked';
+
+  if (checks.history.skippedIds.has(track.id)) return 'skipped';
+
+  if (discover && track.artists.some((artist) => checks.known.artistIds.includes(artist.id) || checks.history.artistNames.has(normalize(artist.name)))) {
+    return 'known_artist';
+  }
+
+  // Discover: one song per artist.
+  return discover && track.artists.some((artist) => artists.has(artist.id)) ? 'same_artist' : null;
+};
+
+const isKnown = (track: TrackInfo, checks: Checks): boolean =>
+  checks.known.trackUris.includes(track.uri) ||
+  Boolean(track.isrc && checks.known.isrcs.includes(track.isrc)) ||
+  checks.voted.up.has(track.id) ||
+  checks.history.trackUris.has(track.uri);
+
+// Walks Claude's list in order. Songs Spotify doesn't have, Russian songs (D25), repeats, songs you
+// gave a thumbs down or keep skipping (D26), and on Discover songs by artists you already know or a
+// second song by the same artist are dropped with a reason; songs you know (including ones you
+// liked before) are kept and labelled (D14).
 export const selectTracks = (
   suggestions: Suggestion[],
   found: (TrackInfo | null)[],
@@ -33,41 +72,25 @@ export const selectTracks = (
   discovery: Discovery,
   voted: Record<Vote, Set<string>> = { up: new Set(), down: new Set() },
   seeds: TrackInfo[] = [],
+  history: HistoryFilters = noHistory,
 ): Selection => {
-  const knownUris = new Set(known.trackUris);
-  const knownIsrcs = new Set(known.isrcs);
-  const votedOn = (track: TrackInfo, vote: Vote): boolean => voted[vote].has(track.id) || Boolean(track.isrc && voted[vote].has(track.isrc));
-  const knownArtists = new Set(known.artistIds);
+  const checks: Checks = { known, discovery, voted, history };
   // The seeds are already in the list (they go first), so Claude suggesting one again is a repeat.
   const seen = new Set<string>(seeds.flatMap((seed) => [seed.id, ...(seed.isrc ? [seed.isrc] : [])]));
+  const artists = new Set<string>();
   const selection: Selection = { tracks: [], dropped: [] };
 
   suggestions.forEach((suggestion, index) => {
     const track = found[index];
+    const reason = track ? dropReason(track, checks, seen, artists) : 'not_found';
 
-    const drop = (reason: Dropped['reason']): void => {
-      selection.dropped.push({ artist: suggestion.artist, title: suggestion.title, reason });
-    };
-
-    if (!track) return drop('not_found');
-
-    if (isRussianSong(track)) return drop('russian');
-
-    if (seen.has(track.id) || (track.isrc && seen.has(track.isrc))) return drop('duplicate');
-
-    if (votedOn(track, 'down')) return drop('disliked');
-
-    if (discovery === 'adventurous' && track.artists.some((artist) => knownArtists.has(artist.id))) return drop('known_artist');
+    if (reason || !track) return void selection.dropped.push({ artist: suggestion.artist, title: suggestion.title, reason: reason ?? 'not_found' });
 
     if (selection.tracks.length >= keepCount) return;
 
-    seen.add(track.id);
-
-    if (track.isrc) seen.add(track.isrc);
-
-    const isKnown = knownUris.has(track.uri) || Boolean(track.isrc && knownIsrcs.has(track.isrc)) || votedOn(track, 'up');
-
-    selection.tracks.push({ position: selection.tracks.length, track, reason: suggestion.reason, kind: suggestion.kind, known: isKnown });
+    [track.id, ...(track.isrc ? [track.isrc] : [])].forEach((key) => seen.add(key));
+    track.artists.forEach((artist) => artists.add(artist.id));
+    selection.tracks.push({ position: selection.tracks.length, track, reason: suggestion.reason, kind: suggestion.kind, known: isKnown(track, checks) });
   });
 
   return selection;
@@ -130,7 +153,8 @@ export const createRun = async ({ db, env, claude, userId }: RunDeps, input: Run
   const answer = await claude.ask({ system, user: promptFor(db, userId, profile, input, seeds) });
   const wanted = answer.suggestions.map((item) => ({ artist: item.artist, title: item.title, artistAlt: item.artist_alt, titleAlt: item.title_alt }));
   const found = await verifyAll(db, get, wanted);
-  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery, votedSets(db, userId), seeds);
+  const history = historyFilters(loadHistory(db, userId));
+  const selection = selectTracks(answer.suggestions, found, profile.known, input.discovery, votedSets(db, userId), seeds, history);
 
   await markSaved(get, selection.tracks);
 
