@@ -15,20 +15,20 @@ const track = (id: string, name: string, artist = 'Artist'): TrackInfo => ({
 
 describe('the Russian song check', () => {
   it('goes by letters only Russian uses', () => {
-    expect(looksRussian('выхода нет')).toBe(true);
-    expect(looksRussian('Лавандовый Город')).toBe(true);
-    expect(looksRussian('алёна швец.')).toBe(true);
+    expect(looksRussian('Белый дым')).toBe(true);
+    expect(looksRussian('Это всё')).toBe(true);
+    expect(looksRussian('Подъезд')).toBe(true);
   });
 
   it('leaves Ukrainian, Latin and undecidable Cyrillic alone', () => {
-    expect(looksRussian('Тисяча пісень')).toBe(false);
-    expect(looksRussian('Силуети')).toBe(false);
-    expect(looksRussian('Stefania')).toBe(false);
-    expect(looksRussian('REVIVƎЯ')).toBe(false);
+    expect(looksRussian('Співай зі мною')).toBe(false);
+    expect(looksRussian('Небо')).toBe(false);
+    expect(looksRussian('Summer Rain')).toBe(false);
+    expect(looksRussian('BACKWARDƎЯ')).toBe(false);
   });
 
   it('drops Russian titles and artists from a run with a reason', () => {
-    const songs = [track('t1', 'Тисяча пісень', 'KLER'), track('t2', 'выхода нет', 'ksmfx'), track('t3', 'Stay', 'еяхат музыка')];
+    const songs = [track('t1', 'Співай зі мною', 'Band One'), track('t2', 'Белый дым', 'Band Two'), track('t3', 'Stay', 'Тёмный')];
 
     const suggestions = songs.map((song) => ({
       artist: song.artists[0]?.name ?? '',
@@ -41,10 +41,10 @@ describe('the Russian song check', () => {
 
     const selection = selectTracks(suggestions, songs, { trackUris: [], isrcs: [], artistIds: [] }, 'mixed');
 
-    expect(selection.tracks.map((item) => item.track.name)).toEqual(['Тисяча пісень']);
+    expect(selection.tracks.map((item) => item.track.name)).toEqual(['Співай зі мною']);
 
     expect(selection.dropped.map((item) => [item.title, item.reason])).toEqual([
-      ['выхода нет', 'russian'],
+      ['Белый дым', 'russian'],
       ['Stay', 'russian'],
     ]);
   });

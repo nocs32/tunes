@@ -11,7 +11,7 @@ describe('normalize', () => {
     expect(normalize('The Beatles')).toBe('beatles');
     expect(normalize('Beyoncé')).toBe('beyonce');
     expect(normalize('Simon & Garfunkel')).toBe(normalize('Simon and Garfunkel'));
-    expect(normalize('稲葉曇')).toBe('稲葉曇');
+    expect(normalize('青い鳥')).toBe('青い鳥');
   });
 });
 
@@ -32,7 +32,7 @@ describe('artistMatches', () => {
   });
 
   it('accepts a collaboration when the lead artist is on the track', () => {
-    expect(artistMatches(['TRFN & PET3RPUNX'], [{ id: '1', name: 'TRFN' }, { id: '2', name: 'PET3RPUNX' }])).toBe(true);
+    expect(artistMatches(['NOVA & K4TE'], [{ id: '1', name: 'NOVA' }, { id: '2', name: 'K4TE' }])).toBe(true);
     expect(artistMatches(['Malcolm X'], [{ id: '1', name: 'Malcolm X' }])).toBe(true);
   });
 });
@@ -92,9 +92,9 @@ describe('searchQueries', () => {
   });
 
   it('does not repeat a query when there is no other spelling', () => {
-    expect(searchQueries({ artist: 'TRFN & PET3RPUNX', title: 'THE WAY - Slowed' })).toEqual([
-      { q: 'track:"THE WAY - Slowed" artist:"TRFN"', artistFiltered: true },
-      { q: 'THE WAY TRFN', artistFiltered: false },
+    expect(searchQueries({ artist: 'NOVA & K4TE', title: 'NIGHT RUN - Slowed' })).toEqual([
+      { q: 'track:"NIGHT RUN - Slowed" artist:"NOVA"', artistFiltered: true },
+      { q: 'NIGHT RUN NOVA', artistFiltered: false },
     ]);
   });
 });
